@@ -19,7 +19,7 @@ Instruction on building the library:
 
 * Makefile_qphixlib:
 *
-* choose mode= :
+* mode= :
 *   mic (KNC, KNL)
 *   avx (BDW, HSW, etc., NOT tested for GF yet!)
 *   sse (NOT tested for GF yet!)
@@ -31,6 +31,7 @@ Instruction on building the library:
 *
 * OpenMP enabled by default, to disable it, comment out 
 * -qopenmp option in CXXFLAGS (Non-OpenMP version NOT tested).
+*
 * include milc-qphix-codegen directory in CXXFLAGS, e.g., -I../qphix-codegen
 
 * Customize customMake.${mode}
