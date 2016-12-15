@@ -1,0 +1,254 @@
+MAKEFILE= Makefile_qphixlib
+
+TARGET=ks_long_dslash
+#DEBUG=1
+mode=mic 
+#mode=avx
+
+#CODEGEN_PATH=./
+
+mode:=$(strip $(mode))
+
+CONFFILE=customMake.$(mode)
+include $(CONFFILE)
+
+# 1 for cray machine
+#CRAY= 1
+
+ENABLE_MPI= 1
+
+ifeq ($(CRAY),1)
+  ifeq ($(ENABLE_MPI),1)
+  ifneq ($(ASSUME_MULTINODE),1)
+    CXX = CC
+  else
+    CXX = icpc
+  endif
+  else
+    CXX = icpc
+  endif
+else
+ifeq ($(ENABLE_MPI),1)
+ifneq ($(ASSUME_MULTINODE),1)
+CXX = mpiicpc
+else
+CXX = icpc
+endif
+else
+CXX = icpc
+endif
+endif
+ifeq ($(DEBUG),1)
+OPTFLAGS = -O0
+else
+OPTFLAGS = -O3
+endif
+
+CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I../qphix-codegen
+
+CXXFLAGS += -parallel-source-info=2 -debug inline-debug-info -qopt-report=5
+
+#ifeq ($(PRECISION),1)
+#override QPHIX_PrecisionInt=1
+#else
+#override QPHIX_PrecisionInt=2
+#endif
+
+ifeq ($(mode),mic)
+#ifeq ($(PRECISION),1)
+VECLENF=16
+VECLEND=8
+QPHIXLIB=libqphixmilc_mic_single.a
+ifeq ($(ENABLE_MPI),1)
+QPHIXLIB=libqphixmilc_mic.a
+endif
+ifeq ($(AVX512),1)
+QPHIXLIB=libqphixmilc_avx512_single.a
+ifeq ($(ENABLE_MPI),1)
+QPHIXLIB=libqphixmilc_avx512.a
+endif
+endif
+#override VECLEN=16
+#else
+#override VECLEN=8
+endif
+
+ifeq ($(mode),avx)
+VECLENF=8
+VECLEND=4
+QPHIXLIB=libqphixmilc_single.a
+ifeq ($(ENABLE_MPI),1)
+QPHIXLIB=libqphixmilc.a
+endif
+ifeq ($(AVX2),1)
+QPHIXLIB=libqphixmilc_avx2_single.a
+ifeq ($(ENABLE_MPI),1)
+QPHIXLIB=libqphixmilc_avx2.a
+endif
+endif
+#ifeq ($(PRECISION),1)
+#override VECLEN=8
+#else
+#override VECLEN=4
+#endif
+endif
+
+ifeq ($(mode),sse)
+VECLENF=4
+VECLEND=2
+#ifeq ($(PRECISION),1)
+#override VECLEN=4
+#else
+#override VECLEN=2
+#endif
+QPHIXLIB=libqphixmilc_sse.a
+ifeq ($(ENABLE_MPI),1)
+QPHIXLIB=libqphixmilc_sse_mpi.a
+endif
+MINCT=2
+MPSSFLAGS = -msse3
+endif
+
+ifeq ($(mode),scalar)
+#override VECLEN=1
+#override SOALEN=1
+VECLENF=1
+VECLEND=1
+QPHIXLIB=libqphixmilc_scalar.a
+ifeq ($(ENABLE_MPI),1)
+QPHIXLIB=libqphixmilc_scalar_mpi.a
+endif
+endif
+
+
+ifeq ($(mode),mic)
+ifneq ($(AVX512),1)
+MPSSFLAGS = -mmic -mGLOB_default_function_attrs="use_gather_scatter_hint=off"
+else
+MPSSFLAGS = -xMIC-AVX512
+yesnolist += AVX512
+endif
+endif
+
+ifeq ($(mode),avx)
+ifneq ($(AVX2),1)
+MPSSFLAGS = -mavx
+else
+MPSSFLAGS = -march=core-avx2 -xCORE-AVX2
+endif
+MINCT=2
+yesnolist += AVX2
+endif
+
+export
+
+yesnolist += ENABLE_STREAMING_STORES
+yesnolist += ENABLE_LOW_PRECISION
+yesnolist += ENABLE_BARRIER
+yesnolist += COMPRESSED_12
+yesnolist += USE_WAITANY
+yesnolist += ENABLE_MPI
+yesnolist += TIME_CG
+
+deflist += MINCT
+deflist += BY
+deflist += BZ
+deflist += BARRIER_FREQ_T
+deflist += QPHIX_Precision
+deflist += XY_PAD
+deflist += XYZ_PAD
+deflist += CODEGEN_PATH
+
+DEFS += $(strip $(foreach var, $(yesnolist), $(if $(filter 1, $($(var))), -D$(var))))
+DEFS += $(strip $(foreach var, $(deflist), $(if $($(var)), -D$(var)=$($(var)))))
+
+LIBQPHIXMILC_SRC= ks_long_dslash.cpp ks_d_congrad_fn.cpp ks_multicg_offset.cpp ks_blas_utils_c.cpp hrtimer.cpp qphix_f3.cpp qphix_d3.cpp qphix_misc.cpp  ks_boundary.cpp
+
+LIBQPHIXMILC_SRC+= gauge_force_imp.cpp gf_boundary.cpp gauge_force_imp_complete_specialization.cpp
+
+HEADERS = Barrier.h dslash_mic_complete_specialization.h gauge_force_imp_complete_specialization.h gauge_force_imp.h gf_boundary.h hrtimer.h ks_blas_utils_c.h ks_boundary.h ks_cg_perf_profiler.h  ks_config.h ks_globals.h phaser.h qcd_data_types.h qphix_d3.h qphix_f3.h qphix.h qphix_internal.h qphix_int.h qphix_types.h stopwatch.h ubench_helper.h utils.h qphix_d3_generic.h qphix_d3_internal.h qphix_f3_generic.h qphix_f3_internal.h ks_long_dslash.h ks_d_congrad_fn.h misc.h
+
+all: $(TARGET)
+
+ks_long_dslash.fo: ks_long_dslash.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_long_dslash.cpp -o ks_long_dslash.fo $(CMLLDFLAGS)
+
+ks_long_dslash.do: ks_long_dslash.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_long_dslash.cpp -o ks_long_dslash.do $(CMLLDFLAGS)
+
+ks_boundary.fo: ks_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_boundary.cpp -o ks_boundary.fo $(CMLLDFLAGS)
+
+ks_boundary.do: ks_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_boundary.cpp -o ks_boundary.do $(CMLLDFLAGS)
+
+ks_blas_utils_c.fo: ks_blas_utils_c.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_blas_utils_c.cpp -o ks_blas_utils_c.fo $(CMLLDFLAGS)
+
+ks_blas_utils_c.do: ks_blas_utils_c.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_blas_utils_c.cpp -o ks_blas_utils_c.do $(CMLLDFLAGS)
+
+qphix_misc.fo: qphix_misc.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_misc.cpp -o qphix_misc.fo $(CMLLDFLAGS)
+
+qphix_misc.do: qphix_misc.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c qphix_misc.cpp -o qphix_misc.do $(CMLLDFLAGS)
+
+qphix_misc.o: qphix_misc.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_misc.cpp -o qphix_misc.o $(CMLLDFLAGS)
+
+ks_d_congrad_fn.fo: ks_d_congrad_fn.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_d_congrad_fn.cpp -o ks_d_congrad_fn.fo $(CMLLDFLAGS)
+
+ks_d_congrad_fn.do: ks_d_congrad_fn.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_d_congrad_fn.cpp -o ks_d_congrad_fn.do $(CMLLDFLAGS)
+
+ks_multicg_offset.fo: ks_multicg_offset.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_multicg_offset.cpp -o ks_multicg_offset.fo $(CMLLDFLAGS)
+
+ks_multicg_offset.do: ks_multicg_offset.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_multicg_offset.cpp -o ks_multicg_offset.do $(CMLLDFLAGS)
+
+ks_dslash_complete_specialization.fo: ks_dslash_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_dslash_complete_specialization.cpp -o ks_dslash_complete_specialization.fo $(CMLLDFLAGS)
+
+ks_dslash_complete_specialization.do: ks_dslash_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_dslash_complete_specialization.cpp -o ks_dslash_complete_specialization.do $(CMLLDFLAGS)
+
+gauge_force_imp.fo: gauge_force_imp.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gauge_force_imp.cpp -o gauge_force_imp.fo $(CMLLDFLAGS)
+
+gauge_force_imp.do: gauge_force_imp.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gauge_force_imp.cpp -o gauge_force_imp.do $(CMLLDFLAGS)
+
+gf_boundary.fo: gf_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gf_boundary.cpp -o gf_boundary.fo $(CMLLDFLAGS)
+
+gf_boundary.do: gf_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gf_boundary.cpp -o gf_boundary.do $(CMLLDFLAGS)
+
+gauge_force_imp_complete_specialization.fo: gauge_force_imp_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gauge_force_imp_complete_specialization.cpp -o gauge_force_imp_complete_specialization.fo $(CMLLDFLAGS)
+
+gauge_force_imp_complete_specialization.do: gauge_force_imp_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gauge_force_imp_complete_specialization.cpp -o gauge_force_imp_complete_specialization.do $(CMLLDFLAGS)
+
+
+OBJECTS= ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do qphix_misc.fo qphix_misc.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do
+
+OBJECTS+= gauge_force_imp.fo gauge_force_imp.do gf_boundary.fo gf_boundary.do gauge_force_imp_complete_specialization.fo gauge_force_imp_complete_specialization.do
+
+qphix_f3.o: qphix_f3.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_f3.cpp -o qphix_f3.o $(CMLLDFLAGS)
+
+qphix_d3.o: qphix_d3.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c qphix_d3.cpp -o qphix_d3.o $(CMLLDFLAGS)
+
+ks_long_dslash: ks_dslash_complete_specialization.h ${LIBQPHIXMILC_SRC} $(MAKEFILE) customMake.$(mode) ${OBJECTS}
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} qphix_f3.cpp -c $(CMLLDFLAGS)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} qphix_d3.cpp -c $(CMLLDFLAGS)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) hrtimer.cpp -c  $(CMLLDFLAGS)
+	ar rvs ${QPHIXLIB} ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do qphix_f3.o qphix_d3.o hrtimer.o qphix_misc.fo qphix_misc.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do gauge_force_imp.fo gauge_force_imp.do gf_boundary.fo gf_boundary.do gauge_force_imp_complete_specialization.fo gauge_force_imp_complete_specialization.do
+
+clean: 
+	rm -rf *.o *.fo *.do 

@@ -1,0 +1,81 @@
+mode=sse
+PRECISION=1
+
+ENABLE_MPI=0
+
+# Lattice Dimensions in Y, Z and T
+BY=4
+BZ=8
+NX=32
+NY=32
+NZ=32
+NT=96
+
+NCORES=16
+SY=1
+SZ=2
+
+ENABLE_BARRIER=1
+BARRIER_FREQ_T=16
+
+COMPRESSED_12=1
+
+# Number of iterations for a timing
+NREPEAT=100
+
+# Number of timings
+BENCH_REPEAT=4
+
+
+USE_PACKED_GAUGES = 1     # Use 2D xy packing for Gauges
+ENABLE_STREAMING_STORES=1
+ENABLE_LOW_PRECISION=0
+
+CLAMP_OFFCORE=0   # Disables offcore communication by setting boundaries within core's working set
+CLAMP_IN_L1=0     # Calls DSlash NREPEAT times for same spinor causing it to execute from L1 except for the first call
+
+YZ_TILING=0       # Enables 4x4xNT tiling of data structures
+
+# Padding options (Applicable only when YZ_TILING=0)
+XY_PAD=1          # No. of Spinors/Gauges padded after every XY plane
+XYZ_PAD=0         # No. of Spinors/Gauges padded after every XYZ slice
+
+# Include sampling stuff
+ENABLE_SEP_SAMPLING = 0
+SEPHOME=/home/bjoo/MPSS/sep
+
+ifdef 32C
+NX=32
+NY=32
+NZ=32
+NT=96
+endif
+
+ifdef 24C
+NX=24
+NY=24
+NZ=24
+NT=96
+endif
+
+ifdef 40C
+NX=40
+NY=40
+NZ=40
+NT=96
+endif
+
+ifdef 48C
+NX=48
+NY=48
+NZ=48
+NT=64
+endif
+
+ifdef 1C
+NX=32
+NY=4
+NZ=4
+NT=32
+NCORES=1
+endif

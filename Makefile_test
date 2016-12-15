@@ -1,0 +1,153 @@
+MAKEFILE=Makefile_test
+
+TARGET=gauge_force_imp
+#DEBUG=1
+mode=mic 
+#mode=avx
+
+#CODEGEN_PATH=./
+
+mode:=$(strip $(mode))
+
+CONFFILE=customMake.$(mode)
+include $(CONFFILE)
+
+ENABLE_MPI= 0
+
+ifeq ($(ENABLE_MPI),1)
+ifneq ($(ASSUME_MULTINODE),1)
+CXX = mpiicc
+else
+CXX = icc
+endif
+else
+CXX = icc
+endif
+
+ifeq ($(DEBUG),1)
+OPTFLAGS = -O0
+else
+OPTFLAGS = -O3
+endif
+
+CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -I$(SEPHOME)/include -I./ -I../qphix-codegen
+
+CXXFLAGS += -parallel-source-info=2 -debug inline-debug-info -qopt-report=5
+
+LDFLAGS = -qopenmp -xMIC-AVX512 
+
+VECLENF=16
+VECLEND=8
+
+ifeq ($(mode),mic)
+ifneq ($(AVX512),1)
+MPSSFLAGS = -mmic -mGLOB_default_function_attrs="use_gather_scatter_hint=off"
+else
+MPSSFLAGS = -xMIC-AVX512
+yesnolist += AVX512
+endif
+endif
+
+ifeq ($(mode),avx)
+ifneq ($(AVX2),1)
+MPSSFLAGS = -mavx
+else
+MPSSFLAGS = -march=core-avx2 -xCORE-AVX2
+endif
+MINCT=2
+yesnolist += AVX2
+endif
+
+export
+
+yesnolist += ENABLE_STREAMING_STORES
+yesnolist += ENABLE_LOW_PRECISION
+yesnolist += ENABLE_BARRIER
+yesnolist += COMPRESSED_12
+yesnolist += USE_WAITANY
+yesnolist += ENABLE_MPI
+yesnolist += TIME_CG
+
+deflist += MINCT
+deflist += BY
+deflist += BZ
+deflist += BARRIER_FREQ_T
+#deflist += VECLEN
+#deflist += PRECISION
+deflist += QPHIX_Precision
+deflist += XY_PAD
+deflist += XYZ_PAD
+deflist += CODEGEN_PATH
+
+DEFS += $(strip $(foreach var, $(yesnolist), $(if $(filter 1, $($(var))), -D$(var))))
+DEFS += $(strip $(foreach var, $(deflist), $(if $($(var)), -D$(var)=$($(var)))))
+
+SRC= test_gf.cpp gauge_force_imp.cpp gf_boundary.cpp gauge_force_imp_complete_specialization.cpp
+
+SRC+= ks_blas_utils_c.cpp hrtimer.cpp qphix_f3.cpp qphix_d3.cpp qphix_misc.cpp  ks_boundary.cpp ks_long_dslash.cpp
+
+SRC= test_gf.c 
+
+HEADERS = Barrier.h dslash_mic_complete_specialization.h gauge_force_imp_complete_specialization.h gauge_force_imp.h gf_boundary.h hrtimer.h ks_blas_utils_c.h ks_boundary.h ks_cg_perf_profiler.h  ks_config.h ks_globals.h phaser.h qcd_data_types.h qphix_d3.h qphix_f3.h qphix.h qphix_internal.h qphix_int.h qphix_types.h stopwatch.h test_gf.h ubench_helper.h utils.h qphix_d3_generic.h qphix_d3_internal.h qphix_f3_generic.h qphix_f3_internal.h ks_long_dslash.h
+
+HEADERS = test_gf.h
+
+test_gf.o: test_gf.c ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c test_gf.c -o test_gf.o $(CMLLDFLAGS)
+
+gauge_force_imp.fo: gauge_force_imp.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gauge_force_imp.cpp -o gauge_force_imp.fo $(CMLLDFLAGS)
+
+gauge_force_imp.do: gauge_force_imp.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gauge_force_imp.cpp -o gauge_force_imp.do $(CMLLDFLAGS)
+
+gf_boundary.fo: gf_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gf_boundary.cpp -o gf_boundary.fo $(CMLLDFLAGS)
+
+gf_boundary.do: gf_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gf_boundary.cpp -o gf_boundary.do $(CMLLDFLAGS)
+
+gauge_force_imp_complete_specialization.fo: gauge_force_imp_complete_specialization.cpp ${HEADERS} customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gauge_force_imp_complete_specialization.cpp -o gauge_force_imp_complete_specialization.fo $(CMLLDFLAGS)
+
+gauge_force_imp_complete_specialization.do: gauge_force_imp_complete_specialization.cpp ${HEADERS} customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gauge_force_imp_complete_specialization.cpp -o gauge_force_imp_complete_specialization.do $(CMLLDFLAGS)
+
+ks_boundary.fo: ks_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_boundary.cpp -o ks_boundary.fo $(CMLLDFLAGS)
+
+ks_boundary.do: ks_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_boundary.cpp -o ks_boundary.do $(CMLLDFLAGS)
+
+ks_long_dslash.fo: ks_long_dslash.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_long_dslash.cpp -o ks_long_dslash.fo $(CMLLDFLAGS)
+
+ks_long_dslash.do: ks_long_dslash.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_long_dslash.cpp -o ks_long_dslash.do $(CMLLDFLAGS)
+
+ks_blas_utils_c.fo: ks_blas_utils_c.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c ks_blas_utils_c.cpp -o ks_blas_utils_c.fo $(CMLLDFLAGS)
+
+ks_blas_utils_c.do: ks_blas_utils_c.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_blas_utils_c.cpp -o ks_blas_utils_c.do $(CMLLDFLAGS)
+
+qphix_misc.fo: qphix_misc.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_misc.cpp -o qphix_misc.fo $(CMLLDFLAGS)
+
+qphix_misc.do: qphix_misc.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c qphix_misc.cpp -o qphix_misc.do $(CMLLDFLAGS)
+
+qphix_misc.o: qphix_misc.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_misc.cpp -o qphix_misc.o $(CMLLDFLAGS)
+
+OBJECTS = test_gf.o gauge_force_imp.fo gauge_force_imp.do gf_boundary.fo gf_boundary.do gauge_force_imp_complete_specialization.do ks_boundary.do ks_blas_utils_c.do ks_boundary.fo qphix_misc.fo qphix_misc.do ks_long_dslash.fo ks_long_dslash.do
+
+OBJECTS = test_gf.o 
+
+all: $(TARGET)
+
+$(TARGET): $(SRC) $(OBJECTS) ${HEADERS} $(MAKEFILE) customMake.$(mode)
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -o $(TARGET) $(LDFLAGS) $(OBJECTS) -lm -L./ -lqphixmilc_avx512_single
+
+clean: 
+	rm -rf *.o *.fo *.do 
