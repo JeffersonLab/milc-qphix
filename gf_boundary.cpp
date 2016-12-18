@@ -76,9 +76,17 @@ extern int myCoord[4];
 extern int Ls[4];
 static int bufSizeG[4], bufSizeG2[4];
 static int bufSizeH[4], bufSizeH2[4], bufSizeHtmp[3];
-static fptype *gcommsBuf[16], *hcommsBuf[16];
-static fptype *gcommsBuf2[16], *hcommsBuf2[16];
-static fptype *hlocalBuf[6], *glocalBuf[8];
+#if QPHIX_PrecisionInt == 2
+fptype *gcommsBuf[16], *hcommsBuf[16];
+fptype *gcommsBuf2[16], *hcommsBuf2[16];
+fptype *hlocalBuf[6], *glocalBuf[8];
+#else
+#if QPHIX_PrecisionInt == 1
+extern fptype *gcommsBuf[16], *hcommsBuf[16];
+extern fptype *gcommsBuf2[16], *hcommsBuf2[16];
+extern fptype *hlocalBuf[6], *glocalBuf[8];
+#endif
+#endif
 
 static unsigned int PackMask[2][4] = {{0,0,0,0},{0,0,0,0}};
 
@@ -117,35 +125,10 @@ void gf_setup_comms()
 
         int numProcs = geometry[0] * geometry[1] * geometry[2] * geometry[3];
         MYASSERT(numProcs == nRanks);
-/*
-        for(int i = 0; i < 4; i++)
-        {
-                myCoord[i] = myCoord_[i];
-#ifndef ASSUME_MULTINODE
-                local_dir[i] = (geometry[i] == 1 ? true : false);
-#else
-                local_dir[i] = false;
-#endif
-                lDims[i] = gDims[i] / geometry[i];
-                MYASSERT(lDims[i] * geometry[i] == gDims[i]);
-                Ls[i] = myCoord[i] * lDims[i];
-        }
-        Nx = lDims[0]; Ny = lDims[1]; Nz = lDims[2]; Nt = lDims[3];
-        printf("Nx=%d Ny=%d Nz=%d Nt=%d\n", Nx, Ny, Nz, Nt);
-        fflush(stdout);
-        Lsx = Ls[0]; Lsy = Ls[1]; Lsz = Ls[2]; Lst = Ls[3];
-        printf("Lsx = %d Lsy = %d Lsz = %d Lst = %d\n", Lsx, Lsy, Lsz, Lst);
-        Nxh = Nx / 2;
-        Lsxh = Lsx / 2;
-
-        for(int i = 0; i < 8; i++)
-                neigh_ranks[i] = neigh_ranks_[i];
-*/
         for(int i = 0; i < 4; i++) {
                 bufSizeG[i] = 1; bufSizeH[i] = 1;
 		bufSizeG2[i] = 1; bufSizeH2[i] = 1;
 		if(i<3) bufSizeHtmp[i] = 1;
-		//if(i==0) for(int j=0; j<4; ++j) printf("lDims[%d] = %d\n", j, lDims[j]);
                 for(int j = 0; j < 4; j++) if(j != i) {
 		    bufSizeG[i] *= lDims[j]; 
 		    bufSizeH[i] *= lDims[j]; 
@@ -185,7 +168,7 @@ void gf_setup_comms()
 			if(i>0) totalBufSizeHtmp += alignedBufSizeHtmp[i-1];
                 }
         }
-	//printf("totalBufSizeG = %d totalBufSizeH = %d\n", totalBufSizeG, totalBufSizeH);
+#if QPHIX_PrecisionInt == 2
         fptype *htmpBuf = NULL, *gtmpBuf = NULL;
 	fptype *htmpBuf2 = NULL, *gtmpBuf2 = NULL;
         if(totalBufSizeG > 0) {
@@ -200,7 +183,6 @@ void gf_setup_comms()
 #else
 		/* H & G shares the same commsBuf */
 		htmpBuf = (fptype*)MALLOC((4 * totalBufSizeH + totalBufSizeHtmp * 2) * sizeof(fptype), 4096);
-		//htmpBuf = gtmpBuf;
 #endif
                 MYASSERT(htmpBuf != NULL);
 		htmpBuf2 = (fptype*)MALLOC(4 * totalBufSizeH2 * sizeof(fptype), 4096);
@@ -210,11 +192,8 @@ void gf_setup_comms()
                 if(!local_dir[i]) {
                         nCommsDirs += 2;
 #ifndef ASSUME_MULTINODE
-			//printf("ASSUME_MULTINODE NOT defined\n");
-			//fflush(stdout);
                         for(int j = 0; j < 4; j++) {
                                 gcommsBuf[4*i+j] = gtmpBuf;
-				//printf("gcommsBuf[%d] = %d\n", 4*i+j, gcommsBuf[4*i+j]);
 				gcommsBuf2[2*i+(j&1)+(j/2)*8] = gtmpBuf2;
 				hcommsBuf2[2*i+(j&1)+(j/2)*8] = htmpBuf2;
 #ifdef USE_WAITANY
@@ -280,7 +259,7 @@ void gf_setup_comms()
 			hcommsBuf2[2*i+9] = 0x00;
                 }
         }
-
+#endif
 #ifndef ASSUME_MULTINODE
         for(int d = 0; d < 16; d++) {
                 reqSends[d] = reqRecvs[d] = MPI_REQUEST_NULL;
@@ -1504,6 +1483,7 @@ void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelp
 
 void gf_destroy_comms()
 {
+#if QPHIX_PrecisionInt == 2
     if(gcommsBuf[0]!=0x00)
 	FREE(gcommsBuf[0]);
     if(gcommsBuf2[0]!=0x00)
@@ -1512,12 +1492,6 @@ void gf_destroy_comms()
 	FREE(hcommsBuf[0]);
     if(hcommsBuf2[0]!=0x00)
 	FREE(hcommsBuf2[0]);
-/*
-    if(glocalBuf[0]!=0x00)
-	FREE(glocalBuf[0]);
-    if(hlocalBuf[0]!=0x00)
-	FREE(hlocalBuf[0]);
-*/
     for(int i=0; i<16; ++i)
     {
 	gcommsBuf[i]=0x00;
@@ -1530,6 +1504,7 @@ void gf_destroy_comms()
 	glocalBuf[i]=0x00;
 	hlocalBuf[i]=0x00;
     }
+#endif
     for(int i=0; i<2; ++i) for(int j=0; j<4; ++j)
         PackMask[i][j] = 0;
 }

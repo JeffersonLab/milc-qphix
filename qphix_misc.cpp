@@ -29,12 +29,12 @@ extern int qphix_sites_on_node;
 extern int qphix_even_sites_on_node;
 #endif
 
-extern char * BoundTable;
-extern unsigned int * NeighTable;
+extern char * BoundTableF, * BoundTableD;
+extern unsigned int * NeighTableF, * NeighTableD;
 //unsigned int * Neigh3Table = 0x00;
-extern int BLENGTH;
-extern int PadBound;
-extern int PadNeigh;
+extern int BLENGTHF, BLENGTHD;
+extern int PadBoundF, PadBoundD;
+extern int PadNeighF, PadNeighD;
 //int NLENGTH = 0;
 
 /* Gauge force */
@@ -402,12 +402,14 @@ static void neigh_lex_coords(int coords[], const int latdim, const int size[], c
 #define QPHIX_init_fptype QPHIX_init_F
 #define setup_comms setup_comms_F
 #define gf_setup_comms gf_setup_comms_F
+#define QPHIX_finalize_fptype QPHIX_finalize_F
 #define destroy_comms destroy_comms_F
 #define gf_destroy_comms gf_destroy_comms_F
 #elif QPHIX_PrecisionInt==2
 #define QPHIX_init_fptype QPHIX_init_D
 #define setup_comms setup_comms_D
 #define gf_setup_comms gf_setup_comms_D
+#define QPHIX_finalize_fptype QPHIX_finalize_D
 #define destroy_comms destroy_comms_D
 #define gf_destroy_comms gf_destroy_comms_D
 #else
@@ -542,40 +544,22 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
 
 }
 
-#if QPHIX_PrecisionInt == 1
 QPHIX_status_t
-QPHIX_init(QPHIX_layout_t *layout, int prec)
-{
-  if(prec == 1)
-    return QPHIX_init_F(layout);
-  else if(prec == 2)
-    return QPHIX_init_D(layout);
-  else {
-    printf( "QPHIX_PrecisionInt not defined/supported!" );
-    return QPHIX_FAIL;
-  }
-}
-
-QPHIX_status_t 
-QPHIX_finalize(void)
+QPHIX_finalize_fptype(void)
 {
   delete gBar;
   delete phaser;
-  //delete phaser_dslash;
   gBar=0x00;
   phaser=0x00;
-  //phaser_dslash=0x00;
   _mm_free((void *)BoundTable);
   _mm_free((void *)NeighTable);
   BoundTable = 0x00;
   NeighTable = 0x00;
   destroy_comms();
-  //printf("calling gf_destroy_comms...\n");
-  //fflush(stdout);
   gf_destroy_comms();
-  //printf("done gf_destroy_comms\n");
-  //fflush(stdout);
   BLENGTH = 0;
+  PadBound = 0;
+  PadNeigh = 0;
   Gxh = Gx = Gy = Gz = Gt = 0;
   Nxh = Nx = Ny = Nz = Nt = 0;
   Vxh = Vx = Vy = Vz = Vt = 0;
@@ -590,5 +574,20 @@ QPHIX_finalize(void)
 
   return QPHIX_SUCCESS;
 }
+
+#if QPHIX_PrecisionInt == 1
+QPHIX_status_t
+//QPHIX_init(QPHIX_layout_t *layout, int prec)
+QPHIX_init(QPHIX_layout_t *layout)
+{
+  return (QPHIX_status_t)(QPHIX_init_F(layout) | QPHIX_init_D(layout));
+}
+
+QPHIX_status_t
+QPHIX_finalize()
+{
+  return (QPHIX_status_t)(QPHIX_finalize_F() | QPHIX_finalize_D());
+}
+
 #endif
 

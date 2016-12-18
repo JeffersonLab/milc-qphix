@@ -110,8 +110,15 @@ extern int Ls[4];
 #endif
 
 static int bufSize[4];
-static fptype *commsBuf[16];
-static fptype *localBuf[8];
+#if QPHIX_PrecisionInt == 2
+fptype *commsBuf[16];
+fptype *localBuf[8];
+#else 
+#if QPHIX_PrecisionInt == 1
+extern fptype *commsBuf[16];
+extern fptype *localBuf[8];
+#endif
+#endif
 
 #ifndef ASSUME_MULTINODE
 static MPI_Request reqSends[8];
@@ -206,6 +213,7 @@ void setup_comms(int myCoord_[4], int neigh_ranks_[8])
 			totalBufSize += 6*alignedBufSize[i];
 		}
 	}
+#if QPHIX_PrecisionInt == 2
 	fptype *tmpBuf = NULL;
 	if(totalBufSize > 0) {
 		tmpBuf = (fptype*)MALLOC(totalBufSize * sizeof(fptype), 4096);
@@ -240,108 +248,13 @@ void setup_comms(int myCoord_[4], int neigh_ranks_[8])
 			localBuf[2*i+1] = NULL;
 		}
 	}
-
+#endif
 #ifndef ASSUME_MULTINODE
 	for(int d = 0; d < 8; d++) {
 		reqSends[d] = reqRecvs[d] = MPI_REQUEST_NULL;
 	}
 
-#if 0
-	for(int i = 0; i < 4; i++) {
-		if(!local_dir[i]) {
-			MYASSERT(MPI_Irecv((void *)commsBuf[4*i], totalBufSize*sizeof(fptype), MPI_BYTE, neigh_ranks[2*i+0], DSLASH_MPI_RECV_TAG(0), MPI_COMM_WORLD, &reqRecvs[2*i+0]) == MPI_SUCCESS);
-			MYASSERT(MPI_Isend((void *)commsBuf[4*i], totalBufSize*sizeof(fptype), MPI_BYTE, neigh_ranks[2*i+1], DSLASH_MPI_SEND_TAG(1), MPI_COMM_WORLD, &reqSends[2*i+1]) == MPI_SUCCESS);
-			MYASSERT(MPI_Wait(&reqRecvs[2*i+0], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-			MYASSERT(MPI_Wait(&reqSends[2*i+1], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-			break;
-		}
-	}	
-
-	MPI_Barrier(MPI_COMM_WORLD);
-	// Measure the latencies in each direction
-	for(int d = 0; d < 4; d++) {
-		send_lat[2*d] = recv_lat[2*d] = -1;
-		send_lat[2*d+1] = recv_lat[2*d+1] = -1;
-		send_order[2*d+1] = recv_order[2*d] = 2*d;
-		send_order[2*d] = recv_order[2*d+1] = 2*d+1;
-		if(!local_dir[d]) {
-			for(int fb = 0; fb < 2; fb++) {
-				unsigned long long t0, t1, tsumr=0, tsums=0;
-				for(int i = 0; i < 11; i++) {
-					MYASSERT(MPI_Irecv((void *)commsBuf[4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_RECV_TAG(fb), MPI_COMM_WORLD, &reqRecvs[2*d+fb]) == MPI_SUCCESS);
-					MYASSERT(MPI_Isend((void *)commsBuf[2+4*d+1-fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+1-fb], DSLASH_MPI_SEND_TAG(1-fb), MPI_COMM_WORLD, &reqSends[2*d+1-fb]) == MPI_SUCCESS);
-					t0 = __rdtsc();
-					MYASSERT(MPI_Wait(&reqRecvs[2*d+fb], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-					t1 = __rdtsc();
-					if(i > 0) tsumr += (t1 - t0);
-					MYASSERT(MPI_Wait(&reqSends[2*d+1-fb], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-					MYASSERT(MPI_Irecv((void *)commsBuf[4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_RECV_TAG(fb), MPI_COMM_WORLD, &reqRecvs[2*d+fb]) == MPI_SUCCESS);
-					MYASSERT(MPI_Isend((void *)commsBuf[2+4*d+1-fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+1-fb], DSLASH_MPI_SEND_TAG(1-fb), MPI_COMM_WORLD, &reqSends[2*d+1-fb]) == MPI_SUCCESS);
-					t0 = __rdtsc();
-					MYASSERT(MPI_Wait(&reqSends[2*d+1-fb], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-					t1 = __rdtsc();
-					if(i > 0) tsums += (t1 - t0);
-					MYASSERT(MPI_Wait(&reqRecvs[2*d+fb], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-				}
-				recv_lat[2*d+fb]   = tsumr/10;
-				send_lat[2*d+1-fb] = tsums/10;
-			}
-		}
-	}
-
-	for(int k = 0; k < nRanks; k++) {
-		if(!printAllRanks && k > 0) break; 
-		MPI_Barrier(MPI_COMM_WORLD);
-		if(myRank == k) 
-		{
-			char tmpBuf[1024];
-			int pos = 0;
-			if(myRank == 0) {
-				printf("Msg Sizes:  ");
-				for(int i = 0; i < 8; i++) if(!(local_dir[send_order[i]/2])) printf("%d (%5.1f KB) ", send_order[i], bufSize[send_order[i]/2]*sizeof(fptype)/1024.0);
-				printf("\n");
-			}
-			pos+=snprintf(&tmpBuf[pos], 1023-pos, "Rank %3d: Send: ", myRank);
-			for(int i = 0; i < 8; i++) if(!(local_dir[send_order[i]/2])) pos+=snprintf(&tmpBuf[pos], 1023-pos, "%d-%-3d(%8.3f)  ", send_order[i], neigh_ranks[send_order[i]], MSEC(send_lat[send_order[i]]));
-			pos+=snprintf(&tmpBuf[pos], 1023-pos, "\nRank %3d: Recv: ", myRank);
-			for(int i = 0; i < 8; i++) if(!(local_dir[recv_order[i]/2])) pos+=snprintf(&tmpBuf[pos], 1023-pos, "%d-%-3d(%8.3f)  ", recv_order[i], neigh_ranks[recv_order[i]], MSEC(recv_lat[recv_order[i]]));
-			pos+=snprintf(&tmpBuf[pos], 1023-pos, "\n");
-			tmpBuf[pos] = 0;
-			printf("%s\n", tmpBuf);
-		}
-	}
-	MPI_Barrier(MPI_COMM_WORLD);
-
-	// now sort the send and recv orders by their measured latencies
-	for(int i = 0; i < 7; i++) {
-		for(int j = 0; j < 7-i; j++) {
-			unsigned long l1 = recv_lat[recv_order[j]];
-			unsigned long l2 = recv_lat[recv_order[j+1]];
-			if(l2 < l1) {
-				int swap = recv_order[j];
-				recv_order[j] = recv_order[j+1];
-				recv_order[j+1] = swap;
-			}
-			l1 = send_lat[send_order[j]];
-			l2 = send_lat[send_order[j+1]];
-			if(l2 < l1) {
-				int swap = send_order[j];
-				send_order[j] = send_order[j+1];
-				send_order[j+1] = swap;
-			}
-		}
-	}
-	if(myRank == 0) 
-	{
-		printf("After Sorting...\nSend Order: ");
-		for(int i = 0; i < 8; i++) if(!(local_dir[send_order[i]/2])) printf("%d (%8.3f) ", send_order[i], MSEC(send_lat[send_order[i]]));
-		printf("\nRecv Order: ");
-		for(int i = 0; i < 8; i++) if(!(local_dir[recv_order[i]/2])) printf("%d (%8.3f) ", recv_order[i], MSEC(recv_lat[recv_order[i]]));
-		printf("\n");
-	}
 #endif
-#endif
-
 
 	for(int d = 0; d < 8; d++) {
 		for(int t = 0; t < 255; t++) {
@@ -365,14 +278,20 @@ void setup_comms(int myCoord_[4], int neigh_ranks_[8])
 
 void destroy_comms()
 {
-  if(commsBuf[0]!=0x00)
-  {
-    FREE(commsBuf[0]);
+#if QPHIX_PrecisionInt == 2
     for(int i=0; i<16; ++i)
-        commsBuf[i]=0x00;
+        if(commsBuf[i]!=0x00)
+        {
+            FREE(commsBuf[i]);
+            commsBuf[i]=0x00;
+        }
     for(int i=0; i<8; ++i)
-        localBuf[i]=0x00;
-  }
+        if(localBuf[i]!=0x00)
+        {
+            FREE(localBuf[i]);
+            localBuf[i]=0x00;
+        }
+#endif
 }
 
 #if QPHIX_PrecisionInt == 1
