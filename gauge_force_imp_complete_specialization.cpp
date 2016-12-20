@@ -96,32 +96,6 @@ int index(int dir, int dir2)
 	)
 {
 #include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_face_,fptype,VECLEN,,_12)
-/*
-  if(dir==0) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_back_X_,fptype,VECLEN,,_12)
-  }
-  else if(dir==1) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_forw_X_,fptype,VECLEN,,_12)
-  }
-  else if(dir==2) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_back_Y_,fptype,VECLEN,,_12)
-  }
-  else if(dir==3) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_forw_Y_,fptype,VECLEN,,_12)
-  }
-  else if(dir==4) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_back_Z_,fptype,VECLEN,,_12)
-  }
-  else if(dir==5) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_forw_Z_,fptype,VECLEN,,_12)
-  }
-  else if(dir==6) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_back_T_,fptype,VECLEN,,_12)
-  }
-  else if(dir==7) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_7w_pack_to_forw_T_,fptype,VECLEN,,_12)
-  }
-*/
 }
 
         __attribute__((noinline))
@@ -131,40 +105,17 @@ int index(int dir, int dir2)
                 int dir
         )
 {
-  if(dir==0) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_back_X_,fptype,VECLEN,,_12)
-  }
-  else if(dir==1) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_forw_X_,fptype,VECLEN,,_12)
-  }
-  else if(dir==2) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_back_Y_,fptype,VECLEN,,_12)
-  }
-  else if(dir==3) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_forw_Y_,fptype,VECLEN,,_12)
-  }
-  else if(dir==4) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_back_Z_,fptype,VECLEN,,_12)
-  }
-  else if(dir==5) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_forw_Z_,fptype,VECLEN,,_12)
-  }
-  else if(dir==6) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_back_T_,fptype,VECLEN,,_12)
-  }
-  else if(dir==7) {
-#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_to_forw_T_,fptype,VECLEN,,_12)
-  }
+#include INCLUDE_FILE_VAR1(./ARCH/gauge_pack_face_,fptype,VECLEN,,_12)
 }
 
         __attribute__((noinline))
         void gauge_unpack_face_dir_vec_noinline(
-                Gauge *giBase,
+                Gauge *goBase,
                 fptype *rBuf,
                 int dir
         )
 {
-
+#include INCLUDE_FILE_VAR1(./ARCH/gauge_unpack_face_,fptype,VECLEN,,COMPRESSED_SUFFIX)
 }
 
 	__attribute__((noinline))

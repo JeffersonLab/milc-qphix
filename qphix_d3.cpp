@@ -81,8 +81,6 @@ QPHIX_D3_create_V_from_raw( QPHIX_D_Real *src, QPHIX_evenodd_t evenodd )
 {
     QPHIX_D3_ColorVector *V = (QPHIX_D3_ColorVector *)malloc(sizeof(QPHIX_D3_ColorVector));
 
-    //printf("Vx = %d Vy = %d Vz = %d Vt = %d\n VECLEN = %d\n", Vx, Vy, Vz, Vt, VECLEN);
-    //fflush(stdout);
     MYASSERT(V!=0x00);
     V->parity = evenodd;
     V->even = 0x00;
@@ -118,11 +116,6 @@ QPHIX_D3_create_V_from_raw( QPHIX_D_Real *src, QPHIX_evenodd_t evenodd )
 	    z -= t * Nz;
 
             int x1, x2, y1, y2, z1, z2, t1, t2;
-            /*x1 = (x-Lsxh) / Vxh; x2 = x % Vxh;
-            y1 = (y-Lsy) / Vy; y2 = y % Vy;
-            z1 = (z-Lsz) / Vz; z2 = z % Vz;
-            t1 = (t-Lst) / Vt; t2 = t % Vt;
-	    */
 	    x1 = x / Vxh; x2 = x % Vxh;
 	    y1 = y / Vy; y2 = y % Vy;
 	    z1 = z / Vz; z2 = z % Vz;
@@ -173,19 +166,17 @@ QPHIX_D3_create_V_from_raw( QPHIX_D_Real *src, QPHIX_evenodd_t evenodd )
 	}
     }
 */
-/*
 #if TIME_CG
     timer +=  hrtimer_get();
-    if(myRank==0) printf("QPHIX_D3_create_V_from_raw: time = %.6e sec\n ", (timer)/1.e+9);
+    //if(myRank==0) printf("QPHIX_D3_create_V_from_raw: time = %.6e sec\n ", (timer)/1.e+9);
     fflush(stdout);
 #endif
-*/
     return V;
 }
 
 /* create SU3 gauge fields from raw to qphix structure */
 QPHIX_D3_GaugeField  
-*QPHIX_D3_create_G_from_raw( QPHIX_D_Real *rawsrc, QPHIX_D_Real *rawsrc_back, QPHIX_evenodd_t evenodd )
+*QPHIX_D3_create_G_from_raw( QPHIX_D_Real *rawsrc, QPHIX_evenodd_t evenodd )
 {
     MYASSERT(evenodd==QPHIX_EVENODD||evenodd==QPHIX_EVEN||evenodd==QPHIX_ODD);
 #if TIME_GF
@@ -205,6 +196,8 @@ QPHIX_D3_GaugeField
     if(evenodd == QPHIX_EVENODD) gf->parity = QPHIX_EVEN;
 
     Gauge *dest = (Gauge *)gf->geo;
+    fptype *rawsrcp;
+    if(evenodd & QPHIX_ODD) rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
 #ifdef _OPENMP
 #pragma omp parallel default(shared) num_threads(nThreads)
 #endif
@@ -216,6 +209,11 @@ QPHIX_D3_GaugeField
 #endif
     if(gf->parity == QPHIX_EVEN)
     {
+        if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+        {
+            pack_gauge_face_dir(tid, rawsrcp, 2*dir+1, 1);
+        }
+
     	for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
     	{
             int y = i / Nxh;
@@ -237,6 +235,23 @@ QPHIX_D3_GaugeField
 
 	    for(int d=0; d<4; ++d) 
 	    {
+                int backi = i;
+                if(d==0) {
+                    backi -= 1-xodd;
+                    if(xodd==0 && x==0) backi += Nxh;
+                }
+                else if(d==1) {
+                    backi -= Nxh;
+                    if(y==0) backi += Nxh*Ny;
+                }
+                else if(d==2) {
+                    backi -= Nxh*Ny;
+                    if(z==0) backi += Nxh*Ny*Nz;
+                }
+                else {
+                    backi -= Nxh*Ny*Nz;
+                    if(t==0) backi += Nxh*Ny*Nz*Nt;
+                }
 #if COMPRESSED_12
 	    	for(int c1=0; c1<2; ++c1) 
 #else
@@ -245,15 +260,18 @@ QPHIX_D3_GaugeField
 	    	for(int c2=0; c2<3; ++c2) for(int ir=0; ir<2; ++ir) 
 	    	{
 		    dest[ind][2*d+1][c1][c2][ir][v] = rawsrc[72*i+18*d+c1*6+c2*2+ir];
-		    dest[ind][2*d][c1][c2][ir][v] = rawsrc_back[72*i+18*d+c1*6+c2*2+ir];
+		    if(evenodd & QPHIX_ODD)
+			dest[ind][2*d][c1][c2][ir][v] = rawsrcp[backi*72+18*d+c1*6+c2*2+ir];
 		}
 	    }
 	}
+	if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+        {
+            unpack_gauge_face_dir(tid, dest, 2*dir, 0);
+        }
     }
     else
     {
-	fptype *rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
-	fptype *rawsrc_backp = rawsrc_back + 72*qphix_even_sites_on_node;
     	for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
     	{
             int y = i / Nxh;
@@ -283,26 +301,23 @@ QPHIX_D3_GaugeField
             	for(int c2=0; c2<3; ++c2) for(int ir=0; ir<2; ++ir)
             	{
                     dest[ind][2*d+1][c1][c2][ir][v] = rawsrcp[72*i+18*d+c1*6+c2*2+ir];
-                    dest[ind][2*d][c1][c2][ir][v] = rawsrc_backp[72*i+18*d+c1*6+c2*2+ir];
 		}
             }
 	}
     }
     } /* openmp */
-/*
 #if TIME_GF
     timer +=  hrtimer_get();
-    if(myRank==0) printf("QPHIX_D3_create_G_from_raw: time = %.6e sec\n ", (timer)/1.e+9);
-    fflush(stdout);
+    //if(myRank==0) printf("QPHIX_D3_create_G_from_raw: time = %.6e sec\n ", (timer)/1.e+9);
+    //fflush(stdout);
 #endif
-*/
     return gf;
 }
 
 /* create gauge force from raw to qphix structure */
 /* convert from anti-hermition (Ic*H) in raw to hermition (H) in QPhiX */
 QPHIX_D3_Force  
-*QPHIX_D3_create_F_from_raw( QPHIX_D_Real *rawsrc, QPHIX_D_Real *rawsrc_back, QPHIX_evenodd_t evenodd )
+*QPHIX_D3_create_F_from_raw( QPHIX_D_Real *rawsrc, QPHIX_evenodd_t evenodd )
 {
     MYASSERT(evenodd==QPHIX_EVENODD||evenodd==QPHIX_EVEN||evenodd==QPHIX_ODD);
 #if TIME_GF
@@ -318,6 +333,8 @@ QPHIX_D3_Force
     if(evenodd == QPHIX_EVENODD) gf->parity = QPHIX_EVEN;
 
     Hermit *dest = (Hermit *)gf->heo;
+    fptype *rawsrcp;
+    if(evenodd & QPHIX_ODD) rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
 #ifdef _OPENMP
 #pragma omp parallel default(shared) num_threads(nThreads)
 #endif
@@ -329,6 +346,11 @@ QPHIX_D3_Force
 #endif
     if(gf->parity == QPHIX_EVEN)
     {
+	if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+        {
+                pack_momentum_face_dir(tid, rawsrcp, 2*dir+1, 1);
+        }
+
         for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
@@ -350,6 +372,23 @@ QPHIX_D3_Force
 
             for(int d=0; d<4; ++d)
             {
+                int backi = i;
+                if(d==0) {
+                    backi -= 1-xodd;
+                    if(xodd==0 && x==0) backi += Nxh;
+                }
+                else if(d==1) {
+                    backi -= Nxh;
+                    if(y==0) backi += Nxh*Ny;
+                }
+                else if(d==2) {
+                    backi -= Nxh*Ny;
+                    if(z==0) backi += Nxh*Ny*Nz;
+                }
+                else {
+                    backi -= Nxh*Ny*Nz;
+                    if(t==0) backi += Nxh*Ny*Nz*Nt;
+                }
 		for(int k=0; k<8; ++k)
 		{
 		    int c1 = k/4;
@@ -362,15 +401,18 @@ QPHIX_D3_Force
 		    else if(k==6) c1 = c2 = 0;
 		    ir = 1-ir;
 		    dest[ind][2*d+1][k][v] = (-1.+2.*ir)*rawsrc[72*i+18*d+c1*6+c2*2+ir];
-                    dest[ind][2*d][k][v] = (-1.+2.*ir)*rawsrc_back[72*i+18*d+c1*6+c2*2+ir];
+		    if(evenodd & QPHIX_ODD)
+                	dest[ind][2*d][k][v] = (-1.+2.*ir)*rawsrcp[backi*72+18*d+c1*6+c2*2+ir];
 		}
             }
+        }
+	if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+        {
+                unpack_momentum_face_dir(tid, dest, 2*dir, 0);
         }
     }
     else
     {
-        fptype *rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
-        fptype *rawsrc_backp = rawsrc_back + 72*qphix_even_sites_on_node;
         for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
@@ -404,19 +446,16 @@ QPHIX_D3_Force
                     else if(k==6) c1 = c2 = 0;
 		    ir = 1-ir;
                     dest[ind][2*d+1][k][v] = (-1.+2.*ir)*rawsrcp[72*i+18*d+c1*6+c2*2+ir];
-                    dest[ind][2*d][k][v] = (-1.+2.*ir)*rawsrc_backp[72*i+18*d+c1*6+c2*2+ir];
                 }
 	    }
 	}
     }
     } /* openmp */
-/*
 #if TIME_GF
     timer +=  hrtimer_get();
-    if(myRank==0) printf("QPHIX_D3_create_F_from_raw: time = %.6e sec\n ", (timer)/1.e+9);
-    fflush(stdout);
+    //if(myRank==0) printf("QPHIX_D3_create_F_from_raw: time = %.6e sec\n ", (timer)/1.e+9);
+    //fflush(stdout);
 #endif
-*/
     return gf;
 }
 
@@ -443,12 +482,6 @@ QPHIX_D3_extract_V_to_raw( QPHIX_D_Real *dest, QPHIX_D3_ColorVector *src, QPHIX_
             z -= t * Nz;
 
             int x1, x2, y1, y2, z1, z2, t1, t2;
-            /*
-	    x1 = (x-Lsxh) / Vxh; x2 = x % Vxh;
-            y1 = (y-Lsy) / Vy; y2 = y % Vy;
-            z1 = (z-Lsz) / Vz; z2 = z % Vz;
-            t1 = (t-Lst) / Vt; t2 = t % Vt;
-	    */
             x1 = x / Vxh; x2 = x % Vxh;
             y1 = y / Vy; y2 = y % Vy;
             z1 = z / Vz; z2 = z % Vz;
@@ -489,25 +522,26 @@ QPHIX_D3_extract_V_to_raw( QPHIX_D_Real *dest, QPHIX_D3_ColorVector *src, QPHIX_
                     dest[6*(i+qphix_even_sites_on_node)+c*2+1] = kso[ind][c][1][v];
             }
     }
-/*
+
 #if TIME_CG
     timer += hrtimer_get();
-    if(myRank==0) printf("QPHIX_D3_extract_V_to_raw: time = %.6e sec\n ", (timer)/1.e+9);
-    fflush(stdout);
+    //if(myRank==0) printf("QPHIX_D3_extract_V_to_raw: time = %.6e sec\n ", (timer)/1.e+9);
+    //fflush(stdout);
 #endif
-*/
 }
 
 /* copy SU3 gauge fields from qphix structure to raw */
 void QPHIX_D3_extract_G_to_raw( QPHIX_D_Real *dest, QPHIX_D3_GaugeField  *src, QPHIX_evenodd_t evenodd )
 {
     /* check parity */
-    //MYASSERT(src->parity&evenodd);
 #if TIME_GF
     timer -= hrtimer_get();
 #endif
     Gauge *gf = (Gauge *)src->geo;
     MYASSERT(gf!=0x00);
+
+    QPHIX_D_Real *destp;
+    if(evenodd & QPHIX_ODD) destp = dest + 72*qphix_even_sites_on_node;
 
     if(src->parity == QPHIX_EVEN)
 #ifdef _OPENMP
@@ -572,23 +606,23 @@ void QPHIX_D3_extract_G_to_raw( QPHIX_D_Real *dest, QPHIX_D3_GaugeField  *src, Q
 		    if(evenodd & QPHIX_EVEN)
 		    {
 			dest[72*i+18*d+6*c1+2*c2+ir] = gf[ind][2*d+1][c1][c2][ir][v];
-#if COMPRESSED_12
-		    	reconstruct_gauge_third_row(&dest[72*i+18*d], 0, 0, 0);
-#endif
 		    }
 		    if(evenodd & QPHIX_ODD)
 		    {
-		    	dest[72*(backi+qphix_even_sites_on_node)+18*d+6*c1+2*c2+ir] = gf[ind][2*d][c1][c2][ir][v];
-#if COMPRESSED_12   
-		    	reconstruct_gauge_third_row(&dest[72*(backi+qphix_even_sites_on_node)+18*d], 0, 0, 0);
-#endif
+		    	destp[72*backi+18*d+6*c1+2*c2+ir] = gf[ind][2*d][c1][c2][ir][v];
 		    }
 		}
+#if COMPRESSED_12
+		if(evenodd & QPHIX_EVEN)
+		    reconstruct_gauge_third_row(&dest[72*i+18*d], 0, 0, 0);
+		if(evenodd & QPHIX_ODD)
+		    reconstruct_gauge_third_row(&destp[72*backi+18*d], 0, 0, 0);
+#endif		
 	    }
 	}
 
 	if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
-		unpack_gauge_face_dir(tid, dest, 2*dir+1, 0);
+		unpack_gauge_face_dir(tid, destp, 2*dir+1, 1);
     }
     else
 #ifdef _OPENMP
@@ -652,39 +686,37 @@ void QPHIX_D3_extract_G_to_raw( QPHIX_D_Real *dest, QPHIX_D3_GaugeField  *src, Q
                 {
                     if(evenodd & QPHIX_ODD)
 		    {
-			dest[72*(i+qphix_even_sites_on_node)+18*d+6*c1+2*c2+ir] = gf[ind][2*d+1][c1][c2][ir][v];
-#if COMPRESSED_12
-		    	reconstruct_gauge_third_row(&dest[72*(i+qphix_even_sites_on_node)+18*d], 0, 0, 0);
-#endif
+			destp[72*i+18*d+6*c1+2*c2+ir] = gf[ind][2*d+1][c1][c2][ir][v];
 		    }
 		    if(evenodd & QPHIX_EVEN)
 		    {
                     	dest[72*backi+18*d+6*c1+2*c2+ir] = gf[ind][2*d][c1][c2][ir][v];
-#if COMPRESSED_12   
-		    	reconstruct_gauge_third_row(&dest[72*backi+18*d], 0, 0, 0);
-#endif
 		    }
 		}
+#if COMPRESSED_12
+		if(evenodd & QPHIX_ODD)
+		    reconstruct_gauge_third_row(&destp[72*i+18*d], 0, 0, 0);
+		if(evenodd & QPHIX_EVEN)
+		    reconstruct_gauge_third_row(&dest[72*backi+18*d], 0, 0, 0);
+#endif
 	    }
 	}
 
 	if(evenodd & QPHIX_EVEN) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
-		unpack_gauge_face_dir(tid, dest, 2*dir+1, 1);
+		unpack_gauge_face_dir(tid, dest, 2*dir+1, 0);
     }
-/*
+
 #if TIME_GF
     timer += hrtimer_get();
-    if(myRank==0) printf("QPHIX_D3_extract_G_to_raw: time = %.6e sec\n ", (timer)/1.e+9);
-    fflush(stdout);
+    //if(myRank==0) printf("QPHIX_D3_extract_G_to_raw: time = %.6e sec\n ", (timer)/1.e+9);
+    //fflush(stdout);
 #endif
-*/
+
 }
 
 /* copy gauge force from qphix structure to raw */
 void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_evenodd_t evenodd )
 {
-    /* check parity */
-    //MYASSERT(src->parity&evenodd);
 #if TIME_GF
     timer -= hrtimer_get();
 #endif
@@ -692,6 +724,8 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
     MYASSERT(gf!=0x00);
 
     int nv[4] = {Nx, Ny, Nz, Nt};
+    QPHIX_D_Real *destp = dest + 72*qphix_even_sites_on_node;
+
     if(src->parity == QPHIX_EVEN)
 #ifdef _OPENMP
 #pragma omp parallel default(shared) num_threads(nThreads)
@@ -702,9 +736,6 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
 #else
         int tid = 0;
 #endif
-	//if(tid==0) { printf("src->parity == QPHIX_EVEN\n"); fflush(stdout); }
-
-
         if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
         {
                 pack_momentum_face_dir(tid, gf, 2*dir, 0);
@@ -766,8 +797,8 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
 		    }
 		    if(evenodd & QPHIX_ODD) 
 		    {
-			dest[72*(backi+qphix_even_sites_on_node)+18*d+6*c1+2*c2+ir] = (-1.+2.*ir)*gf[ind][2*d][k][v];
-			dest[72*(backi+qphix_even_sites_on_node)+18*d+6*c2+2*c1+ir] = gf[ind][2*d][k][v];
+			destp[72*backi+18*d+6*c1+2*c2+ir] = (-1.+2.*ir)*gf[ind][2*d][k][v];
+			destp[72*backi+18*d+6*c2+2*c1+ir] = gf[ind][2*d][k][v];
 		    }
 		}
                 if(evenodd & QPHIX_EVEN)
@@ -779,14 +810,14 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
                 if(evenodd & QPHIX_ODD)
                 {
                     for(int k=0; k<3; ++k)
-                        dest[72*(backi+qphix_even_sites_on_node)+18*d+8*k] = 0.0;
-                    dest[72*(backi+qphix_even_sites_on_node)+18*d+17] = -dest[72*(backi+qphix_even_sites_on_node)+18*d+1]-dest[72*(backi+qphix_even_sites_on_node)+18*d+9];
+                        destp[72*backi+18*d+8*k] = 0.0;
+                    destp[72*backi+18*d+17] = -destp[72*backi+18*d+1]-destp[72*backi+18*d+9];
                 }
 	    }
 	}
 
 	if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
-		unpack_momentum_face_dir(tid, dest+72*qphix_even_sites_on_node, 2*dir+1, 1);
+		unpack_momentum_face_dir(tid, destp, 2*dir+1, 1);
     }
     else
 #ifdef _OPENMP
@@ -854,8 +885,8 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
 		    ir = 1-ir;
                     if(evenodd & QPHIX_ODD) 
 		    {
-			dest[72*(i+qphix_even_sites_on_node)+18*d+6*c1+2*c2+ir] = (-1.+2.*ir)*gf[ind][2*d+1][k][v];
-			dest[72*(i+qphix_even_sites_on_node)+18*d+6*c2+2*c1+ir] = gf[ind][2*d+1][k][v];
+			destp[72*i+18*d+6*c1+2*c2+ir] = (-1.+2.*ir)*gf[ind][2*d+1][k][v];
+			destp[72*i+18*d+6*c2+2*c1+ir] = gf[ind][2*d+1][k][v];
 		    }
                     if(evenodd & QPHIX_EVEN) 
 		    {
@@ -866,8 +897,8 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
                 if(evenodd & QPHIX_ODD)
                 {
                     for(int k=0; k<3; ++k)
-                        dest[72*(i+qphix_even_sites_on_node)+18*d+8*k] = 0.0;
-                    dest[72*(i+qphix_even_sites_on_node)+18*d+17] = -dest[72*(i+qphix_even_sites_on_node)+18*d+1]-dest[72*(i+qphix_even_sites_on_node)+18*d+9];
+                        destp[72*i+18*d+8*k] = 0.0;
+                    destp[72*i+18*d+17] = -destp[72*i+18*d+1]-destp[72*i+18*d+9];
                 }
                 if(evenodd & QPHIX_EVEN)
                 {
@@ -881,13 +912,13 @@ void QPHIX_D3_extract_F_to_raw( QPHIX_D_Real *dest, QPHIX_D3_Force  *src, QPHIX_
 	if(evenodd & QPHIX_EVEN) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
 		unpack_momentum_face_dir(tid, dest, 2*dir+1, 0);
     }
-/*
+
 #if TIME_GF
     timer += hrtimer_get();
-    if(myRank==0) printf("QPHIX_D3_extract_F_to_raw: time = %.6e sec\n ", (timer)/1.e+9);
-    fflush(stdout);
+    //if(myRank==0) printf("QPHIX_D3_extract_F_to_raw: time = %.6e sec\n ", (timer)/1.e+9);
+    //fflush(stdout);
 #endif
-*/
+
 }
 
 /*
@@ -945,11 +976,6 @@ QPHIX_D3_asqtad_create_L_from_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D
             z -= t * Nz;
 
             int x1, x2, y1, y2, z1, z2, t1, t2;
-            /*x1 = (x-Lsxh) / Vxh; x2 = x % Vxh;
-            y1 = (y-Lsy) / Vy; y2 = y % Vy;
-            z1 = (z-Lsz) / Vz; z2 = z % Vz;
-            t1 = (t-Lst) / Vt; t2 = t % Vt;
-	    */
             x1 = x / Vxh; x2 = x % Vxh;
             y1 = y / Vy; y2 = y % Vy;
             z1 = z / Vz; z2 = z % Vz;
@@ -1024,16 +1050,15 @@ QPHIX_D3_asqtad_create_L_from_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D
                 }
             }
     }
-/*
+
 #if TIME_CG
     timer += hrtimer_get();
-    if(myRank==0) cout << myname << ": time = " << timer/1.e+9 << "sec\n" << endl;
+    //if(myRank==0) cout << myname << ": time = " << timer/1.e+9 << "sec\n" << endl;
 #endif
-*/
     return L;
 }
 
-static void 
+void 
 reconstruct_gauge_third_row( QPHIX_D_Real *g, int t, int x, int y )
 {
     for(int d=0; d<4; ++d) for(int c=0; c<3; ++c) 
@@ -1058,7 +1083,12 @@ QPHIX_D3_asqtad_extract_L_to_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D3
     Gauge *gllo = (Gauge *)src->lngodd;
     Gauge18 *gfle = (Gauge18 *)src->fateven;
     Gauge18 *gflo = (Gauge18 *)src->fatodd;
-
+    QPHIX_D_Real *fatp, *lngp;
+    if(evenodd & QPHIX_ODD)
+    {
+	fatp = fat + qphix_even_sites_on_node*72;
+	lngp = lng + qphix_even_sites_on_node*72;
+    }
     if(evenodd & QPHIX_EVEN)
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
@@ -1073,11 +1103,6 @@ QPHIX_D3_asqtad_extract_L_to_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D3
             z -= t * Nz;
 
             int x1, x2, y1, y2, z1, z2, t1, t2;
-            /*x1 = (x-Lsxh) / Vxh; x2 = x % Vxh;
-            y1 = (y-Lsy) / Vy; y2 = y % Vy;
-            z1 = (z-Lsz) / Vz; z2 = z % Vz;
-            t1 = (t-Lst) / Vt; t2 = t % Vt;
-	    */
             x1 = x / Vxh; x2 = x % Vxh;
             y1 = y / Vy; y2 = y % Vy;
             z1 = z / Vz; z2 = z % Vz;
@@ -1100,10 +1125,10 @@ QPHIX_D3_asqtad_extract_L_to_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D3
 		    	    lng[72*i+18*dir+r*6+c*2] = glle[ind][xdir][r][c][0][v];
 		    	    lng[72*i+18*dir+r*6+c*2+1] = glle[ind][xdir][r][c][1][v];
 		    	}
-#ifdef COMPRESSED_12
-		    	else reconstruct_gauge_third_row(lng+72*i, t, (y+z+t)&1, y);
-#endif
 	    	}
+#ifdef COMPRESSED_12
+		reconstruct_gauge_third_row(lng+72*i, t, (y+z+t)&1, y);
+#endif
 	    }
     }
     if(evenodd & QPHIX_ODD)
@@ -1133,27 +1158,26 @@ QPHIX_D3_asqtad_extract_L_to_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D3
                 int xdir = 2*dir+1;
                 for( int r=0; r<3; ++r ) for( int c=0; c<3; ++c )
                 {
-                        fat[72*(i+qphix_even_sites_on_node)+18*dir+r*6+c*2] = gflo[ind][xdir][r][c][0][v];
-                        fat[72*(i+qphix_even_sites_on_node)+18*dir+r*6+c*2+1] = gflo[ind][xdir][r][c][1][v];
+                        fatp[72*i+18*dir+r*6+c*2] = gflo[ind][xdir][r][c][0][v];
+                        fatp[72*i+18*dir+r*6+c*2+1] = gflo[ind][xdir][r][c][1][v];
 #ifdef COMPRESSED_12
                         if( r<2 )
 #endif
                         {
-                            lng[72*(i+qphix_even_sites_on_node)+18*dir+r*6+c*2] = gllo[ind][xdir][r][c][0][v];
-                            lng[72*(i+qphix_even_sites_on_node)+18*dir+r*6+c*2+1] = gllo[ind][xdir][r][c][1][v];
+                            lngp[72*i+18*dir+r*6+c*2] = gllo[ind][xdir][r][c][0][v];
+                            lngp[72*i+18*dir+r*6+c*2+1] = gllo[ind][xdir][r][c][1][v];
                         }
-#ifdef COMPRESSED_12
-                        else reconstruct_gauge_third_row(lng+72*(i+qphix_even_sites_on_node), t, (y+z+t)^1, y);
-#endif
                 }
+#ifdef COMPRESSED_12
+		reconstruct_gauge_third_row(lngp+72*i, t, (y+z+t)^1, y);
+#endif
             }
     }
-/*
+
 #if TIME_CG
     timer += hrtimer_get();
-    if(myRank==0) cout << myname << ": time = " << timer/1.e+9 << "sec\n" << endl;
+    //if(myRank==0) cout << myname << ": time = " << timer/1.e+9 << "sec\n" << endl;
 #endif
-*/
 }
 
 /*

@@ -29,7 +29,7 @@ QPHIX_F_Real *QPHIX_F3_convert_V_to_raw( QPHIX_F3_ColorVector *src );
 */
 
 // Create, extract, destroy QPhiX momentum from/to raw 
-QPHIX_F3_Force *QPHIX_F3_create_F_from_raw(QPHIX_F_Real *fwdrawmom, QPHIX_F_Real *bckrawmom, QPHIX_evenodd_t evenodd);
+QPHIX_F3_Force *QPHIX_F3_create_F_from_raw(QPHIX_F_Real *fwdrawmom, QPHIX_evenodd_t evenodd);
 
 void QPHIX_F3_extract_F_to_raw(QPHIX_F_Real *rawdest, QPHIX_F3_Force *src, QPHIX_evenodd_t evenodd); /* from QPhiX to raw (no allocation) */
 
@@ -37,7 +37,7 @@ void QPHIX_F3_destroy_F(QPHIX_F3_Force *field);
 
 // Create, extract, destroy QPhiX gauge field from/to raw
 
-QPHIX_F3_GaugeField *QPHIX_F3_create_G_from_raw(QPHIX_F_Real *fwdrawgauge, QPHIX_F_Real *bckrawgauge, QPHIX_evenodd_t evenodd);
+QPHIX_F3_GaugeField *QPHIX_F3_create_G_from_raw(QPHIX_F_Real *fwdrawgauge, QPHIX_evenodd_t evenodd);
 
 void QPHIX_F3_extract_G_to_raw(QPHIX_F_Real *rawdest, QPHIX_F3_GaugeField *src, QPHIX_evenodd_t evenodd); /* from QPhiX to raw (no allocation) */
 

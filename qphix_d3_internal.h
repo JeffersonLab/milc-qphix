@@ -31,4 +31,6 @@ struct QPHIX_D3_Force_struct {
   int parity;
 };
 
+void reconstruct_gauge_third_row( QPHIX_D_Real *g, int t, int x, int y );
+
 #endif /* _QPHIX_D3_INTERNAL_H */

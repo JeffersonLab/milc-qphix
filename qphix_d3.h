@@ -35,7 +35,7 @@ QPHIX_D3_FermionLinksAsqtad  *QPHIX_D3_asqtad_create_L_from_raw( QPHIX_D_Real *f
 void  QPHIX_D3_asqtad_extract_L_to_raw( QPHIX_D_Real *fat, QPHIX_D_Real *lng, QPHIX_D3_FermionLinksAsqtad *src, QPHIX_evenodd_t evenodd );
 
 // Create, extract, destroy QPhiX momentum from/to raw 
-QPHIX_D3_Force *QPHIX_D3_create_F_from_raw(QPHIX_D_Real *fwdrawmom, QPHIX_D_Real *bckrawmom, QPHIX_evenodd_t evenodd);
+QPHIX_D3_Force *QPHIX_D3_create_F_from_raw(QPHIX_D_Real *fwdrawmom, QPHIX_evenodd_t evenodd);
 
 void QPHIX_D3_extract_F_to_raw(QPHIX_D_Real *rawdest, QPHIX_D3_Force *src, QPHIX_evenodd_t evenodd); /* from QPhiX to raw (no allocation) */
 
@@ -43,7 +43,7 @@ void QPHIX_D3_destroy_F(QPHIX_D3_Force *field);
 
 // Create, extract, destroy QPhiX gauge field from/to raw
 
-QPHIX_D3_GaugeField *QPHIX_D3_create_G_from_raw(QPHIX_D_Real *fwdrawgauge, QPHIX_D_Real *bckrawgauge, QPHIX_evenodd_t evenodd);
+QPHIX_D3_GaugeField *QPHIX_D3_create_G_from_raw(QPHIX_D_Real *fwdrawgauge, QPHIX_evenodd_t evenodd);
 
 void QPHIX_D3_extract_G_to_raw(QPHIX_D_Real *rawdest, QPHIX_D3_GaugeField *src, QPHIX_evenodd_t evenodd); /* from QPhiX to raw (no allocation) */
 
