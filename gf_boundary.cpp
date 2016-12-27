@@ -588,8 +588,8 @@ static void gf_pack_face_h_dir( int tid, int num_cores, int threads_per_core, fp
 {
         int nyg_pack = 1;
         if(dir == 0) nyg_pack = 2;
-	int lens[4] = {Vxh, Vy, Vz, Vt};
-	int lens1[4] = {Vxh, Vy, Vz, Vt};
+	int lens[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
+	int lens1[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
         lens[dir] = 1;
 
 	int pktsize = VECLEN;
@@ -933,8 +933,8 @@ static void gf_unpack_face_u_dir( int tid, int num_cores, int threads_per_core, 
 {
         int nyg_pack = 1;
         if(dir == 0) nyg_pack = 2;
-	int lens[4] = {Vxh, Vy, Vz, Vt};
-	int lens1[4] = {Vxh, Vy, Vz, Vt};
+	int lens[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
+	int lens1[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
 	lens[dir] = 1;
 
         int npkts = lens[0] * lens[1] * lens[2] * lens[3];
