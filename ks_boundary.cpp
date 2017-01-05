@@ -279,18 +279,15 @@ void setup_comms(int myCoord_[4], int neigh_ranks_[8])
 void destroy_comms()
 {
 #if QPHIX_PrecisionInt == 2
-    for(int i=0; i<16; ++i)
-        if(commsBuf[i]!=0x00)
+    if(commsBuf[0]!=0x00)
+    {
+	FREE(commsBuf[0]);
+        for(int i=0; i<16; ++i)
         {
-            FREE(commsBuf[i]);
             commsBuf[i]=0x00;
-        }
-    for(int i=0; i<8; ++i)
-        if(localBuf[i]!=0x00)
-        {
-            FREE(localBuf[i]);
             localBuf[i]=0x00;
         }
+    }
 #endif
 }
 
