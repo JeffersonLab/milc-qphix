@@ -636,7 +636,7 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 
     gettimeofday( &tv, NULL );
     info->final_sec = tv.tv_sec + 1.e-6 * tv.tv_usec - info->final_sec;
-    info->final_flop = (1205 + 15*num_offsets) * total_iters * qphix_even_sites_on_node;
+    info->final_flop = (1205. + 15.*num_offsets) * total_iters * qphix_even_sites_on_node;
     info->status = QPHIX_SUCCESS; 
     /* Free stuff */
 #ifdef TIME_CG
@@ -921,7 +921,7 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
      
       gettimeofday( &tv, NULL );
       info->final_sec = tv.tv_sec + 1.e-6 * tv.tv_usec - info->final_sec;
-      info->final_flop = (1205 + 15*num_offsets) * total_iters * qphix_even_sites_on_node;
+      info->final_flop = (1205. + 15.*num_offsets) * total_iters * qphix_even_sites_on_node;
       info->status = QPHIX_SUCCESS; 
       /* Free stuff */
 #ifdef TIME_CG
@@ -1069,7 +1069,7 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
  
   gettimeofday( &tv, NULL );
   info->final_sec = tv.tv_sec + 1.e-6 * tv.tv_usec - info->final_sec;
-  info->final_flop = (1205 + 15*num_offsets) * total_iters * qphix_even_sites_on_node;
+  info->final_flop = (1205. + 15.*num_offsets) * total_iters * qphix_even_sites_on_node;
   info->status = QPHIX_SUCCESS; 
   /* Free stuff */
 #ifdef TIME_CG
