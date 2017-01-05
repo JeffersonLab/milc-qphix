@@ -594,7 +594,7 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
 
     info->final_flop = 1187. * total_iters * qphix_even_sites_on_node;
 
-    if(nrestart == max_restarts || iteration == max_cg) {
+    if(myRank==0) if(nrestart == max_restarts || iteration == max_cg) {
         if(omp_get_thread_num() == 0) {
             std::cout << "qphix_congrad: CG not converged after " << total_iters
                       << " iterations and " << nrestart << " restarts, \n"
@@ -1119,7 +1119,7 @@ qphix_ks_multicg_offset ( void *t_src_arg
         }
 
     } // end of while
-    if(nrestart == max_restarts || iteration == max_cg) {
+    if(myRank==0) if(nrestart == max_restarts || iteration == max_cg) {
         if(omp_get_thread_num() == 0) {
             std::cout << "qphix_congrad: CG not converged after " << iteration
                       << " iterations and " << nrestart << " restarts, \n"
@@ -1576,7 +1576,7 @@ qphix_ks_multicg_offset ( void *t_src_arg
 
     } /* End while loop */
 
-    if(nrestart == max_restarts || iteration == max_cg) {
+    if(myRank==0) if(nrestart == max_restarts || iteration == max_cg) {
         if(omp_get_thread_num() == 0) {
             std::cout << "qphix_congrad: CG not converged after " << iteration
                       << " iterations and " << nrestart << " restarts, \n"
