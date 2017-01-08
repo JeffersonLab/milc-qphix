@@ -86,7 +86,9 @@ typedef struct {
 QPHIX_status_t QPHIX_init_F(QPHIX_layout_t *layout);
 QPHIX_status_t QPHIX_init_D(QPHIX_layout_t *layout);
 QPHIX_status_t QPHIX_init(QPHIX_layout_t *layout);
-QPHIX_status_t QPHIX_finalize(void);
+QPHIX_status_t QPHIX_finalize();
+QPHIX_status_t QPHIX_finalize_F();
+QPHIX_status_t QPHIX_finalize_D();
 
 #ifdef __cplusplus
 }
