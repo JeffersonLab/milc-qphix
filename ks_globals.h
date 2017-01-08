@@ -14,8 +14,12 @@
 extern int Gxh, Gx, Gy, Gz, Gt;
 extern int Nxh, Nx, Ny, Nz, Nt;
 extern int Lsxh, Lsx, Lsy, Lsz, Lst;
-extern int Vxh, Vx, Vy, Vz, Vt;
-extern int Pxy, Pxyz;
+//extern int Lsxhf, Lsxf, Lsyf, Lszf, Lstf;
+//extern int Lsxhd, Lsxd, Lsyd, Lszd, Lstd;
+extern int Vxhf, Vxf, Vyf, Vzf, Vtf;
+extern int Vxhd, Vxd, Vyd, Vzd, Vtd;
+extern int Pxyf, Pxyzf;
+extern int Pxyd, Pxyzd;
 extern int NCores;
 extern int n_threads_per_core;
 extern int nThreads;
@@ -25,13 +29,20 @@ extern int num_floats_in_ks_array;
 extern int num_floats_in_gauge_array;
 extern int num_floats_in_hermit_array;
 /* Global variables for the offset calculations */
-extern Phaser *phaser;
+extern Phaser *phaserF, *phaserD;
 //extern Phaser *phaser_dslash;
-extern Barrier* gBar;
+extern Barrier * gBarF, * gBarD;
 extern bool local_dir[4];
 extern int geometry[4];
 
 extern int myRank;
 extern int nRanks;
+
+extern char * BoundTableF, * BoundTableD;
+extern unsigned int * NeighTableF, * NeighTableD;
+extern int BLENGTHF, BLENGTHD, PadBoundF, PadBoundD, PadNeighF, PadNeighD;
+ 
+
+#include "macros.h"
 
 #endif

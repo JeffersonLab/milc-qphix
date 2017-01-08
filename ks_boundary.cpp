@@ -111,12 +111,12 @@ extern int Ls[4];
 
 static int bufSize[4];
 #if QPHIX_PrecisionInt == 2
-fptype *commsBuf[16];
-fptype *localBuf[8];
+void *commsBuf[16];
+void *localBuf[8];
 #else 
 #if QPHIX_PrecisionInt == 1
-extern fptype *commsBuf[16];
-extern fptype *localBuf[8];
+extern void *commsBuf[16];
+extern void *localBuf[8];
 #endif
 #endif
 
@@ -224,17 +224,17 @@ void setup_comms(int myCoord_[4], int neigh_ranks_[8])
 			nCommsDirs += 2;
 #ifndef ASSUME_MULTINODE
 			for(int j = 0; j < 4; j++) {
-				commsBuf[4*i+j] = tmpBuf;
+				commsBuf[4*i+j] = (void *)tmpBuf;
 				tmpBuf += alignedBufSize[i];
 			}
-			localBuf[2*i+0] = tmpBuf;
+			localBuf[2*i+0] = (void *)tmpBuf;
 			tmpBuf += alignedBufSize[i];
-			localBuf[2*i+1] = tmpBuf;
+			localBuf[2*i+1] = (void *)tmpBuf;
 			tmpBuf += alignedBufSize[i];
 #else
 			for(int j = 0; j < 2; j++) {
-				commsBuf[4*i+j] = tmpBuf;
-				commsBuf[4*i+3-j] = tmpBuf;
+				commsBuf[4*i+j] = (void *)tmpBuf;
+				commsBuf[4*i+3-j] = (void *)tmpBuf;
 				tmpBuf += 2*alignedBufSize[i];
 			}
 #endif
@@ -281,7 +281,7 @@ void destroy_comms()
 #if QPHIX_PrecisionInt == 2
     if(commsBuf[0]!=0x00)
     {
-	FREE(commsBuf[0]);
+        FREE(commsBuf[0]);
         for(int i=0; i<16; ++i)
         {
             commsBuf[i]=0x00;
@@ -513,7 +513,7 @@ void pack_face(int tid, int num_cores, int threads_per_core, KS *si, fptype *res
 
 		// We are streaming out in sequence
 		fptype * __restrict rBuf = &res[18*pktsize*pkt];
-		fptype * __restrict lBuf = &localBuf[2*dir+fb][18*pktsize*pkt];
+		fptype * __restrict lBuf = &((fptype *)(localBuf[2*dir+fb]))[18*pktsize*pkt];
 
 		//printf("rank = %d, pkt = %d, outbuf=%p (%lld)\n", myRank, pkt, outbuf, outbuf-res);
 		// OK: now we have xyBase, offs, and oubuf -- we should call the kernel.
@@ -635,7 +635,7 @@ void unpack_face(int tid, int num_cores, int threads_per_core, fptype *inbuf, KS
 		Gauge *gllBase = &ull[t*Pxyz+z*Pxy+y*Vxh+x];
 		// We are streaming out in sequence
 		fptype * __restrict rBuf = &inbuf[18*pktsize*pkt];
-		fptype * __restrict lBuf = &localBuf[2*dir+1-fb][18*pktsize*pkt];
+		fptype * __restrict lBuf = &((fptype *)(localBuf[2*dir+1-fb]))[18*pktsize*pkt];
 
 		// OK: now we have xyBase, offs, and oubuf -- we should call the kernel.
 
@@ -694,7 +694,7 @@ void pack_and_send_boundaries(int tid, KS *si, int cb) {
 				//printf("pack buf size = %d s = %p, e = %p\n", bufSize[d], commsBuf[2+4*d+fb], commsBuf[2+4*d+fb] + bufSize[d]);
 				t0 = __rdtsc();
 #ifndef NO_COMPUTE
-				pack_face(tid, NCores, n_threads_per_core, si, commsBuf[2+4*d+fb], cb, d, fb);
+				pack_face(tid, NCores, n_threads_per_core, si, (fptype *)commsBuf[2+4*d+fb], cb, d, fb);
 #endif
 				t1 = __rdtsc();
 				tt_pack[tid][2*d+fb] += (t1 - t0);
@@ -737,7 +737,7 @@ void recv_and_unpack_boundaries(int tid, KS *so, Gauge18 *u, Gauge *ull, const f
 				gBar->wait(tid);
 				t0 = __rdtsc();
 #ifndef NO_COMPUTE
-				unpack_face(tid, NCores, n_threads_per_core, commsBuf[4*d+fb], so, u, ull, beta, cb, d, fb);
+				unpack_face(tid, NCores, n_threads_per_core, (fptype *)commsBuf[4*d+fb], so, u, ull, beta, cb, d, fb);
 #endif
 				t2 = __rdtsc();
 				tt_unpack[tid][2*d+fb] += (t2 - t0);
@@ -781,7 +781,7 @@ void recv_and_unpack_boundaries(int tid, KS *so, Gauge18 *u, Gauge *ull, const f
 		fb = waitany_dir & 1;
 		t0 = __rdtsc();
 #ifndef NO_COMPUTE
-		unpack_face(tid, NCores, n_threads_per_core, commsBuf[4*d+fb], so, u, ull, beta, cb, d, fb);
+		unpack_face(tid, NCores, n_threads_per_core, (fptype *)commsBuf[4*d+fb], so, u, ull, beta, cb, d, fb);
 #endif
 		t2 = __rdtsc();
 		tt_unpack[tid][2*d+fb] += (t2 - t0);
@@ -831,7 +831,7 @@ void pack_and_send_boundaries(int tid, KS *si, int cb) {
 				if(CML_Threadgroup_member(tgSends[sendTgNum], tid, &tgtid) == MPI_SUCCESS) {
 					t0 = __rdtsc();
 #ifndef NO_COMPUTE
-					pack_face(tgtid, numSendCores, numSendThPerCore, si, commsBuf[2+4*d+fb], cb, d, fb);
+					pack_face(tgtid, numSendCores, numSendThPerCore, si, (fptype *)commsBuf[2+4*d+fb], cb, d, fb);
 #endif
 					t1 = __rdtsc();
 					tt_pack[tgtid][2*d+fb] += (t1 - t0);
@@ -866,7 +866,7 @@ void recv_and_unpack_boundaries(int tid, KS *so, Gauge18 *u, Gauge *ull, const f
 					if(tgtid==0) t_boundary[5][2*d+fb] += (t1 - t0);
 					gBar->wait(tid);
 #ifndef NO_COMPUTE
-					unpack_face(tgtid, numRecvCores, numRecvThPerCore, commsBuf[4*d+fb], so, u, beta, cb, d, fb);
+					unpack_face(tgtid, numRecvCores, numRecvThPerCore, (fptype *)commsBuf[4*d+fb], so, u, beta, cb, d, fb);
 #endif
 					t2 = __rdtsc();
 					tt_unpack[tgtid][2*d+fb] += (t2 - t1);

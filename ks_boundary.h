@@ -4,10 +4,10 @@
 
 extern int Gx, Gy, Gz, Gt;
 extern int Nxh, Nx, Ny, Nz, Nt;
-extern int Vxh, Vx, Vy, Vz, Vt;
-extern int Lsxh, Lsx, Lsy, Lsz, Lst;
+//extern int Vxh, Vx, Vy, Vz, Vt;
+//extern int Lsxh, Lsx, Lsy, Lsz, Lst;
 extern int n_threads_per_core;
-extern int Pxy, Pxyz;
+//extern int Pxy, Pxyz;
 extern int NCores;
 extern Barrier* gBar;
 extern int geometry[4];

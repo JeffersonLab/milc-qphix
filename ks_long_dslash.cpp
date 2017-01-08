@@ -90,10 +90,12 @@ EXTERN bool local_dir[4];
 #if QPHIX_PrecisionInt==1
 int Gxh, Gx, Gy, Gz, Gt;
 int Nxh, Nx, Ny, Nz, Nt;
-int Vxh, Vx, Vy, Vz, Vt;
+//int Vxh, Vx, Vy, Vz, Vt;
+int Vxhf, Vxf, Vyf, Vzf, Vtf;
 int Lsxh, Lsx, Lsy, Lsz, Lst;
+//int Pxy, Pxyz;
+int Pxyf, Pxyzf;
 
-int Pxy, Pxyz;
 int NCores;
 int num_floats_in_ks_array;
 int n_threads_per_core;
@@ -104,10 +106,17 @@ int nRanks;
 bool printAllRanks;
 int nParallelRecvs, nParallelSends;
 
-Phaser *phaser;
+Phaser *phaserF=0x00;
 //Phaser *phaser_dslash;
-Barrier* gBar;
+Barrier* gBarF=0x00;
 bool local_dir[4];
+#else
+#if QPHIX_PrecisionInt==2
+int Vxhd, Vxd, Vyd, Vzd, Vtd;
+int Pxyd, Pxyzd;
+Phaser *phaserD=0x00;
+Barrier* gBarD=0x00;
+#endif
 #endif
 
 const int nGX = (VECLEN < 2 ? 1 : 2);
@@ -122,20 +131,20 @@ const int MBENCH2MILC[8] = { 7, 0, 6, 1, 5, 2, 4, 3 };
 
 #if QPHIX_PrecisionInt==1
 double Freq = getFreq();
-char * BoundTable = 0x00;
-unsigned int * NeighTable = 0x00;
+char * BoundTableF = 0x00;
+unsigned int * NeighTableF = 0x00;
 //unsigned int * Neigh3Table = 0x00;
-int BLENGTH = 0;
-int PadBound = 0;
-int PadNeigh = 0;
+int BLENGTHF = 0;
+int PadBoundF = 0;
+int PadNeighF = 0;
 #elif QPHIX_PrecisionInt==2
 extern double Freq;
-extern char * BoundTable;
-extern unsigned int * NeighTable;
+char * BoundTableD = 0x00;
+unsigned int * NeighTableD = 0x00;
 //unsigned int * Neigh3Table = 0x00;
-extern int BLENGTH;
-extern int PadBound;
-extern int PadNeigh;
+int BLENGTHD = 0;
+int PadBoundD = 0;
+int PadNeighD = 0;
 #else
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
