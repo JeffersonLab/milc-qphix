@@ -13,7 +13,7 @@ CONFFILE=customMake.$(mode)
 include $(CONFFILE)
 
 # 1 for cray machine
-#CRAY= 1
+CRAY= 1
 
 ENABLE_MPI= 1
 
@@ -154,6 +154,8 @@ deflist += MINCT
 deflist += BY
 deflist += BZ
 deflist += BARRIER_FREQ_T
+#deflist += VECLEN
+#deflist += PRECISION
 deflist += QPHIX_Precision
 deflist += XY_PAD
 deflist += XYZ_PAD
@@ -162,11 +164,12 @@ deflist += CODEGEN_PATH
 DEFS += $(strip $(foreach var, $(yesnolist), $(if $(filter 1, $($(var))), -D$(var))))
 DEFS += $(strip $(foreach var, $(deflist), $(if $($(var)), -D$(var)=$($(var)))))
 
+#LIBQPHIXMILC_SRC= ks_long_dslash.cpp ks_d_congrad_fn.cpp  ks_d_congrad_fn_two_src.cpp ks_blas_utils_c.cpp hrtimer.cpp                 
 LIBQPHIXMILC_SRC= ks_long_dslash.cpp ks_d_congrad_fn.cpp ks_multicg_offset.cpp ks_blas_utils_c.cpp hrtimer.cpp qphix_f3.cpp qphix_d3.cpp qphix_misc.cpp  ks_boundary.cpp
 
 LIBQPHIXMILC_SRC+= gauge_force_imp.cpp gf_boundary.cpp gauge_force_imp_complete_specialization.cpp
 
-HEADERS = Barrier.h dslash_mic_complete_specialization.h gauge_force_imp_complete_specialization.h gauge_force_imp.h gf_boundary.h hrtimer.h ks_blas_utils_c.h ks_boundary.h ks_cg_perf_profiler.h  ks_config.h ks_globals.h phaser.h qcd_data_types.h qphix_d3.h qphix_f3.h qphix.h qphix_internal.h qphix_int.h qphix_types.h stopwatch.h ubench_helper.h utils.h qphix_d3_generic.h qphix_d3_internal.h qphix_f3_generic.h qphix_f3_internal.h ks_long_dslash.h ks_d_congrad_fn.h misc.h
+HEADERS = Barrier.h dslash_mic_complete_specialization.h gauge_force_imp_complete_specialization.h gauge_force_imp.h gf_boundary.h hrtimer.h ks_blas_utils_c.h ks_boundary.h ks_cg_perf_profiler.h  ks_config.h ks_globals.h phaser.h qcd_data_types.h qphix_d3.h qphix_f3.h qphix.h qphix_internal.h qphix_int.h qphix_types.h stopwatch.h ubench_helper.h utils.h qphix_d3_generic.h qphix_d3_internal.h qphix_f3_generic.h qphix_f3_internal.h ks_long_dslash.h macros.h
 
 all: $(TARGET)
 
@@ -245,10 +248,17 @@ qphix_d3.o: qphix_d3.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c qphix_d3.cpp -o qphix_d3.o $(CMLLDFLAGS)
 
 ks_long_dslash: ks_dslash_complete_specialization.h ${LIBQPHIXMILC_SRC} $(MAKEFILE) customMake.$(mode) ${OBJECTS}
+	#$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} ks_long_dslash.cpp -c  $(CMLLDFLAGS)
+	#$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) ks_blas_utils_c.cpp -c  $(CMLLDFLAGS)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} qphix_f3.cpp -c $(CMLLDFLAGS)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} qphix_d3.cpp -c $(CMLLDFLAGS)
+	#$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) qphix_misc.cpp -c $(CMLLDFLAGS)
+	#$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) ks_d_congrad_fn_two_src.cpp -c  $(CMLLDFLAGS)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) hrtimer.cpp -c  $(CMLLDFLAGS)
+	#ar rvs libqphixmilc.a ks_long_dslash.o ks_blas_utils_c.o ks_d_congrad_fn.o ks_d_congrad_fn_two_src.o hrtimer.o
+	#ar rvs libqphixmilc.a ks_long_dslash.o ks_blas_utils_c.o ks_d_congrad_fn.o hrtimer.o
 	ar rvs ${QPHIXLIB} ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do qphix_f3.o qphix_d3.o hrtimer.o qphix_misc.fo qphix_misc.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do gauge_force_imp.fo gauge_force_imp.do gf_boundary.fo gf_boundary.do gauge_force_imp_complete_specialization.fo gauge_force_imp_complete_specialization.do
+	#ar rvs ${QPHIXLIB} ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do qphix_f3.o qphix_d3.o hrtimer.o qphix_misc.fo qphix_misc.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do 
 
 clean: 
 	rm -rf *.o *.fo *.do 
