@@ -1041,7 +1041,7 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
     res_arg[j]->final_rsq     = (fptype)rsq/source_norm;
     res_arg[j]->size_r        = res_arg[j]->final_rsq;
     res_arg[j]->size_relr     = res_arg[j]->final_rel;
-    res_arg[j]->final_iter   = total_iters;
+    res_arg[j]->final_iter   = iteration;
     res_arg[j]->final_restart = nrestart;
     //->converged     = 0;
   }
