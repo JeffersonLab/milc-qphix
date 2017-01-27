@@ -31,5 +31,6 @@ struct QPHIX_F3_FermionLinksAsqtad_struct {
   void *fatodd;
 };
 
+void reconstruct_gauge_third_row( QPHIX_F_Real *g, int t, int x, int y );
 
 #endif /* _QPHIX_F3_INTERNAL_H */

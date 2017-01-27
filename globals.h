@@ -84,10 +84,14 @@
 int Gx=NX, Gy=NY, Gz=NZ, Gt=NT;
 int Nxh, Nx, Ny, Nz, Nt;
 int Vxh, Vx, Vy, Vz, Vt;
+int Vxhf, Vxf, Vyf, Vzf, Vtf;
+int Vxhd, Vxd, Vyd, Vzd, Vtd;
 int Lsxh = 0, Lsx = 0, Lsy = 0, Lsz = 0, Lst = 0;
 int Bx = 0, By = BY, Bz=BZ;
 int Sy = SY, Sz = SZ, n_threads_per_core;
 int Pxy, Pxyz;
+int Pxyf, Pxyzf;
+int Pxyd, Pxyzd;
 int NCores = NCORES;
 int iters = NREPEAT;
 int bench_repeats = BENCH_REPEAT;

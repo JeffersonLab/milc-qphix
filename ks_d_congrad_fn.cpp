@@ -55,7 +55,7 @@
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
 
-extern int qphix_even_sites_on_node;
+extern int qphix_sites_on_node;
 
 /******************************** BLAS Kernels ********************************/
 static double
@@ -228,12 +228,6 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
     if(myRank == 0 ) printf("QPHIX_fptype_asqtad_invert\n");
     fflush(stdout);
     char myname[25] = "qphix_ks_d_congrad_fn";
-/*
-#if QPHIX_PrecisionInt==2
-#warning "QPHIX asqtad inverter: Right now support single precision only" 
-    return 0;
-#endif
-*/
 
     assert(in->parity==out->parity && in->parity==inv_arg->parity);
 #if TIME_CG
@@ -324,10 +318,11 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
 	  ((fptype*)t_dest)[i] = 0.0;
 	gettimeofday( &tv, NULL );	
 	info->final_sec = tv.tv_sec + 1.e-6 * tv.tv_usec - info->final_sec;
+
 	//printf("d_congrad_qphix: source_norm = 0.0 parity = %d\n", parity);
 #if TIME_CG
         extern int myRank;
-        if(myRank == 0) std::cout << myname << ": CG_time(s) = " << (hrtimer_get() - t)/1.0e09 << " , Gflops = 0 \n";
+        if(myRank == 0) std::cout << "Total CG Time (s) : " << (hrtimer_get() - t)/1.0e09 << "\n";
 #endif	
 	res_arg->final_rel = 0;
 	res_arg->final_rsq = 0;
@@ -340,14 +335,7 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
 	freeKS(cg_p);
 	freeKS(resid);
 
-/*
-  delete gBar;
-  delete phaser;
-  gBar=0x00;
-  phaser=0x00;
-*/
-	//return iteration;
-	return total_iters;
+	return iteration;
     }
 
     while(true) {
@@ -430,16 +418,17 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
                nrestart  >= max_restarts ||
                ((rsqmin <= 0 || rsqmin > res_arg->final_rsq) &&
                 (relrsqmin <= 0 || relrsqmin > res_arg->final_rel))) {
+
 /*
 #if TIME_CG
                 extern int myRank;
                 if(myRank == 0)
                 {
                         double cg_time = (hrtimer_get() - t)/1.0e09;
-                        std::cout << myname << ": CG_time(s) = " << cg_time << " , Gflops = " << info->final_flop/1.e09/cg_time << "\n";
+			info->final_flop = 1187.*(1+total_iters)*qphix_sites_on_node;
+                        std::cout << myname << ": Total CG Time (s) : " << cg_time << " , Gflops : " << info->final_flop/cg_time << "\n";
                 }
 #if BW_CG
-		cgPerfData.iters++;
                 print_cg_timings(cgPerfData);
 #endif
 #endif
@@ -537,8 +526,6 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
 #endif       
         /* dest <- dest + a*cg_p */  
         /* resid <- resid + a*ttt */
-	//printf("calling calc_rsq2\n");
-	//fflush(stdout);
         rsq = calc_rsq2( (fptype*)t_dest
                        , (fptype*)cg_p
                        , a
@@ -592,11 +579,14 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
     res_arg->final_iter   = total_iters;
     res_arg->final_restart = nrestart;
 
+<<<<<<< HEAD
     info->final_flop = 1187. * total_iters * qphix_even_sites_on_node;
 
+=======
+>>>>>>> gauge_force
     if(myRank==0) if(nrestart == max_restarts || iteration == max_cg) {
         if(omp_get_thread_num() == 0) {
-            std::cout << "qphix_congrad: CG not converged after " << total_iters
+            std::cout << "qphix_congrad: CG not converged after " << iteration
                       << " iterations and " << nrestart << " restarts, \n"
                       << "rsq. = " << std::scientific << res_arg->final_rsq 
                       << " wanted " << rsqmin << " relrsq = " 
@@ -618,15 +608,26 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
   gBar=0x00;
   phaser=0x00;
 */
+/*
 #if TIME_CG
-    extern int myRank;
-    if(myRank == 0)
-    {
-	double cgt = (hrtimer_get() - t)/1.0e09;
-	std::cout << myname << ": CG_time(s) = " << cgt << " , Gflops = " <<  info->final_flop/1.0e09/cgt << "\n";
-    }
+		extern int myRank;
+    if(myRank == 0) std::cout << "Total CG Time (s) : " << (hrtimer_get() - t)/1.0e09 << "\n";
 #endif    
-    return total_iters;
+*/
+#if TIME_CG
+                extern int myRank;
+                if(myRank == 0)
+                {
+                        double cg_time = (hrtimer_get() - t)/1.0e09;
+                        info->final_flop = 1187.*total_iters*qphix_sites_on_node;
+                        std::cout << myname << ": Total_CG_time(s) = " << cg_time << " , Gflops = " << info->final_flop/cg_time/1.0e09 << "\n";
+                }
+#if BW_CG
+                print_cg_timings(cgPerfData);
+#endif
+#endif
+
+    return iteration;
 }
 
 
@@ -1576,7 +1577,11 @@ qphix_ks_multicg_offset ( void *t_src_arg
 
     } /* End while loop */
 
+<<<<<<< HEAD
     if(myRank == 0) if(nrestart == max_restarts || iteration == max_cg) {
+=======
+    if(myRank==0) if(nrestart == max_restarts || iteration == max_cg) {
+>>>>>>> gauge_force
         if(omp_get_thread_num() == 0) {
             std::cout << "qphix_congrad: CG not converged after " << iteration
                       << " iterations and " << nrestart << " restarts, \n"

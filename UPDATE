@@ -1,0 +1,28 @@
+################ QPHIX mbench update #################
+#
+# Ruizi Li,     Jan 15th. 2017
+#
+######################################################
+#
+# QPhiX mbench is updated to include the staggered multi-mass CG, 
+# GF routine and coresponding remapping
+#
+#
+# Added C++ source files:
+# 1. gauge_force_imp.cpp - gauge force (GF) routine
+# 2. gauge_force_imp_complete_specialization.cpp - GF intrinsic kernel wrapper
+# 3. gf_boundary.cpp - GF communications
+# 4. ks_multicg_offset.cpp - staggered multi-mass CG routine
+# 5. qphix_misc.cpp - QPhiX initialization and finalization routines
+#
+# Added headers:
+# gauge_force_imp.h, gauge_force_imp_complete_specialization.h, gf_boundary.h, macros.h
+# 
+# Modified C++ source files:
+# 1. qphix_{f,d}3.cpp - added gauge and momentum remapping routines
+# 
+# Modified headers:
+# ks_globals.h (for mixed precision support), qcd_data_types.h (added e.g. hermition matrix), 
+# qphix_{f,d}3.h, qphix_{f,d}3_generic.h, qphix_{f,d}3_internal.h
+#
+######################################################

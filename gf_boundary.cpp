@@ -77,14 +77,14 @@ extern int Ls[4];
 static int bufSizeG[4], bufSizeG2[4];
 static int bufSizeH[4], bufSizeH2[4], bufSizeHtmp[3];
 #if QPHIX_PrecisionInt == 2
-fptype *gcommsBuf[16], *hcommsBuf[16];
-fptype *gcommsBuf2[16], *hcommsBuf2[16];
-fptype *hlocalBuf[6], *glocalBuf[8];
+void *gcommsBuf[16], *hcommsBuf[16];
+void *gcommsBuf2[16], *hcommsBuf2[16];
+void *hlocalBuf[6], *glocalBuf[8];
 #else
 #if QPHIX_PrecisionInt == 1
-extern fptype *gcommsBuf[16], *hcommsBuf[16];
-extern fptype *gcommsBuf2[16], *hcommsBuf2[16];
-extern fptype *hlocalBuf[6], *glocalBuf[8];
+extern void *gcommsBuf[16], *hcommsBuf[16];
+extern void *gcommsBuf2[16], *hcommsBuf2[16];
+extern void *hlocalBuf[6], *glocalBuf[8];
 #endif
 #endif
 
@@ -193,13 +193,13 @@ void gf_setup_comms()
                         nCommsDirs += 2;
 #ifndef ASSUME_MULTINODE
                         for(int j = 0; j < 4; j++) {
-                                gcommsBuf[4*i+j] = gtmpBuf;
-				gcommsBuf2[2*i+(j&1)+(j/2)*8] = gtmpBuf2;
-				hcommsBuf2[2*i+(j&1)+(j/2)*8] = htmpBuf2;
+                                gcommsBuf[4*i+j] = (void*)gtmpBuf;
+				gcommsBuf2[2*i+(j&1)+(j/2)*8] = (void*)gtmpBuf2;
+				hcommsBuf2[2*i+(j&1)+(j/2)*8] = (void*)htmpBuf2;
 #ifdef USE_WAITANY
-				hcommsBuf[4*i+j] = gtmpBuf;
+				hcommsBuf[4*i+j] = (void*)gtmpBuf;
 #else
-				hcommsBuf[4*i+j] = htmpBuf;
+				hcommsBuf[4*i+j] = (void*)htmpBuf;
 				htmpBuf += alignedBufSizeH[i];
 #endif
 				gtmpBuf += alignedBufSizeG[i];
@@ -208,25 +208,25 @@ void gf_setup_comms()
                         }
 			if(i>0)	
 			{
-                            hlocalBuf[2*i-2] = htmpBuf;
+                            hlocalBuf[2*i-2] = (void*)htmpBuf;
                             htmpBuf += alignedBufSizeHtmp[i-1];
-                            hlocalBuf[2*i-1] = htmpBuf;
+                            hlocalBuf[2*i-1] = (void*)htmpBuf;
                             htmpBuf += alignedBufSizeHtmp[i-1];
 			}
-			glocalBuf[2*i+0] = gtmpBuf;
+			glocalBuf[2*i+0] = (void*)gtmpBuf;
 			gtmpBuf += alignedBufSizeG[i];
-			glocalBuf[2*i+1] = gtmpBuf;
+			glocalBuf[2*i+1] = (void*)gtmpBuf;
 			gtmpBuf += alignedBufSizeG[i];
 #else
                         for(int j = 0; j < 2; j++) {
-				gcommsBuf[4*i+j] = gtmpBuf;
-				gcommsBuf[4*i+3-j] = gtmpBuf;
+				gcommsBuf[4*i+j] = (void*)gtmpBuf;
+				gcommsBuf[4*i+3-j] = (void*)gtmpBuf;
 #ifdef USE_WAITANY
-				hcommsBuf[4*i+j] = gtmpBuf;
-				hcommsBuf[4*i+3-j] = gtmpBuf;
+				hcommsBuf[4*i+j] = (void*)gtmpBuf;
+				hcommsBuf[4*i+3-j] = (void*)gtmpBuf;
 #else
-				hcommsBuf[4*i+j] = htmpBuf;
-				hcommsBuf[4*i+3-j] = htmpBuf;
+				hcommsBuf[4*i+j] = (void*)htmpBuf;
+				hcommsBuf[4*i+3-j] = (void*)htmpBuf;
 				htmpBuf += 2*alignedBufSizeH[i];
 #endif
 				gtmpBuf += 2*alignedBufSizeG[i];
@@ -372,7 +372,7 @@ static void gf_pack_face_u(int tid, int num_cores, int threads_per_core, Gauge *
 		int off_next = (t_next-t)*Pxyz+(z_next-z)*Pxy+(y_next-y)*Vxh+(x_next-x);
 
                 fptype * __restrict rBuf = &res[84*pktsize*pkt];
-                fptype * __restrict lBuf = &glocalBuf[2*dir+1-fb][84*pktsize*pkt];
+                fptype * __restrict lBuf = &((fptype *)(glocalBuf[2*dir+1-fb]))[84*pktsize*pkt];
 //#pragma omp critical
 		//if(fb==1) {
 		//printf("thread %d : dir = %d\n", tid, dir*2+fb);
@@ -395,6 +395,7 @@ static void gf_pack_face_u_dir( int tid, int num_cores, int threads_per_core, Ga
         int pktsize = VECLEN;
         if((1 << dir) < VECLEN) pktsize = VECLEN/2;
         int pkts_per_core = (npkts + num_cores - 1) / num_cores;
+	MYASSERT(12*pktsize*npkts == bufSizeG2[dir]);
 
         int cid = tid/threads_per_core;
         int smtid = tid - threads_per_core * cid;
@@ -457,11 +458,15 @@ static void gf_pack_face_u_dir( int tid, int num_cores, int threads_per_core, fp
 {
 	int nyg_pack = 1;
         if(dir == 0) nyg_pack = 2;
-	int lens[4] = {Nxh, Ny/nyg_pack, Nz, Nt};
-	int lens1[4] = {Nxh, Ny/nyg_pack, Nz, Nt};
+	int lens[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
+	int lens1[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
 	lens[dir] = 1;
         int npkts = lens[0] * lens[1] * lens[2] * lens[3];
+
+	int pktsize = VECLEN;
+	if((1 << dir) < VECLEN) pktsize = VECLEN/2;
         int pkts_per_core = (npkts + num_cores - 1) / num_cores;
+	MYASSERT(12*pktsize*npkts == bufSizeG2[dir]);
 
         int cid = tid/threads_per_core;
         int smtid = tid - threads_per_core * cid;
@@ -490,8 +495,24 @@ static void gf_pack_face_u_dir( int tid, int num_cores, int threads_per_core, fp
                         int row = (fb == 1 ? 1-xodd : xodd);
                         y += row;
                 }
-		for(int i=0; i<12; ++i)
-			res[12*pkt+i] = gi[(((t*Nz+z)*Ny+y)*Nx+x)*72+18*dir+i];
+
+		int lens0[4] = {Nxh, Ny, Nz, Nt};
+		int vi = 0;
+		for(int v=0; v<VECLEN; ++v) if((PackMask[fb][dir]>>v)&1)
+		{
+		    int coord0[4];
+		    int tmp1 = v/nGX;
+		    coord0[0] = (v-tmp1*nGX)*Vxh+x;
+		    int tmp2 = tmp1/nGY;
+		    coord0[1] = (tmp1-tmp2*nGY)*Vy+y;
+		    tmp1 = tmp2/nGZ;
+		    coord0[2] = (tmp2-tmp1*nGZ)*Vz+z;
+		    coord0[3] = tmp1*Vt+t;
+		    int ind0 = (((coord0[3]*Nz+coord0[2])*Ny+coord0[1])*Nxh+coord0[0])*72;
+		    for(int i=0; i<12; ++i)
+			res[(12*pkt+i)*pktsize+vi] = gi[ind0+18*dir+i];
+		    vi++;
+		}
 	}
 }
 
@@ -559,15 +580,6 @@ static void gf_pack_face_h_dir( int tid, int num_cores, int threads_per_core, He
                 int off_next = (t_next-t)*Pxyz+(z_next-z)*Pxy+(y_next-y)*Vxh+(x_next-x);
 
                 fptype * __restrict rBuf = &res[8*pktsize*pkt];
-#if 0
-		for(int k=0; k<8; ++k) for(int v=0; v<pktsize; ++v)
-		{
-			printf("thread %d : rBuf[%d][%d][%d] = %f\n", tid, pkt, k, v, res[8*pktsize*pkt+k*pktsize+v]);
-			fflush(stdout);
-		}		
-		printf("thread %d : x= %d y= %d z= %d t= %d pkt= %d\n", tid, x, y, z, t, pkt);
-		fflush(stdout);
-#endif
                 momentum_pack_face_dir_vec_noinline(hiBase, rBuf, dir*2+fb);
         }
 }
@@ -576,12 +588,16 @@ static void gf_pack_face_h_dir( int tid, int num_cores, int threads_per_core, fp
 {
         int nyg_pack = 1;
         if(dir == 0) nyg_pack = 2;
-        int lens[4] = {Nxh, Ny/nyg_pack, Nz, Nt};
-        int lens1[4] = {Nxh, Ny/nyg_pack, Nz, Nt};
+	int lens[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
+	int lens1[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
         lens[dir] = 1;
-        int npkts = lens[0] * lens[1] * lens[2] * lens[3];
-        int pkts_per_core = (npkts + num_cores - 1) / num_cores;
 
+	int pktsize = VECLEN;
+	if((1 << dir) < VECLEN) pktsize = VECLEN/2;
+        int npkts = lens[0] * lens[1] * lens[2] * lens[3];
+	MYASSERT(8*pktsize*npkts == bufSizeH2[dir]);
+
+        int pkts_per_core = (npkts + num_cores - 1) / num_cores;
         int cid = tid/threads_per_core;
         int smtid = tid - threads_per_core * cid;
 
@@ -609,14 +625,34 @@ static void gf_pack_face_h_dir( int tid, int num_cores, int threads_per_core, fp
                         int row = (fb == 1 ? 1-xodd : xodd);
                         y += row;
                 }
-                for(int i=0; i<8; ++i)
-		{
+
+                int lens0[4] = {Nxh, Ny, Nz, Nt};
+                int vi = 0;
+                for(int v=0; v<VECLEN; ++v) if((PackMask[fb][dir]>>v)&1)
+                {
+                    int coord0[4];
+                    int tmp1 = v/nGX;
+                    coord0[0] = (v-tmp1*nGX)*Vxh+x;
+                    int tmp2 = tmp1/nGY;
+                    coord0[1] = (tmp1-tmp2*nGY)*Vy+y;
+                    tmp1 = tmp2/nGZ;
+                    coord0[2] = (tmp2-tmp1*nGZ)*Vz+z;
+                    coord0[3] = tmp1*Vt+t;
+		    int ind0 = (((coord0[3]*Nz+coord0[2])*Ny+coord0[1])*Nxh+coord0[0])*72;
+                    for(int i=0; i<8; ++i)
+		    {
 			int c1 = i/4;
-			int c2=2;
+			int c2 = 2;
 			int ir = i&1;
-			if(i<2 || i==7) c2=1;
-			else if(i==6) { c1=c2=0; ir=1; }
-                        res[8*pkt+i] = hi[(((t*Nz+z)*Ny+y)*Nx+x)*72+18*dir+6*c1+2*c2+ir];
+			if(i<2 || i==7) {
+			    c2 = 1;
+			    if(i==7) ir = 0;
+			}
+			else if(i==6) c1 = c2 = 0;
+			ir = 1-ir;
+                        res[(8*pkt+i)*pktsize+vi] = (-1.+2.*ir)*hi[ind0+18*dir+6*c1+2*c2+ir];
+		    }
+		    vi++;
 		}
         }
 }
@@ -742,8 +778,8 @@ static void gf_unpack_face_u(int tid, int num_cores, int threads_per_core,
 				    for(int itmp=3; itmp>=0; --itmp) if(itmp!=(i>>1))
 					ii = coordtmp[itmp] + lentmp[itmp]*ii;
 				    rBuf[i] = &gtmpbuf[i][84*hpktsize[i>>1]/8*ii];
-			 	    lBuf[i] = &glocalBuf[i][84*hpktsize[i>>1]/8*ii];
-				    hBuf[i] = &hcommsBuf[2+2*(i>>1)+i][7*hpktsize[i>>1]*ii];
+			 	    lBuf[i] = &((fptype *)(glocalBuf[i]))[84*hpktsize[i>>1]/8*ii];
+				    hBuf[i] = &((fptype *)(hcommsBuf[2+2*(i>>1)+i]))[7*hpktsize[i>>1]*ii];
 				}
 				else {
 				    rBuf[i] = 0x00;
@@ -755,26 +791,18 @@ static void gf_unpack_face_u(int tid, int num_cores, int threads_per_core,
 			}
 			else {
 			    rBuf[i] = &gibuf[84*pktsize*pkt];
-			    lBuf[i] = &glocalBuf[2*dir+fb][84*pktsize*pkt];
-			    hBuf[i] = &hcommsBuf[2+4*dir+fb][56*pktsize*pkt];
+			    lBuf[i] = &((fptype *)(glocalBuf[2*dir+fb]))[84*pktsize*pkt];
+			    hBuf[i] = &((fptype *)(hcommsBuf[2+4*dir+fb]))[56*pktsize*pkt];
 			    len++;
 			}
 			if(i<2)
 			{
 			    	if(dir==0) hoBase[i] = &hio[NTNow[16*ind+i]];
-			    	else hoBase[i] = (Hermit *)&hlocalBuf[2*(dir-1)+fb][(112*pkth[i]+56*(1-i))*VECLEN];
+			    	else hoBase[i] = (Hermit *)&((fptype *)(hlocalBuf[2*(dir-1)+fb]))[(112*pkth[i]+56*(1-i))*VECLEN];
 			}
 			else
 			    	hoBase[i] = (Hermit *)&htmp[NTNow[16*ind+i]][(i&1)? i-3 : i-1];
 		}
-		//fptype * __restrict rBuf = &gibuf[84*pktsize*pkt];
-		//fptype * __restrict lBuf = &glocalBuf[2*dir+fb][84*pktsize*pkt];
-		//fptype * __restrict hBuf = &hcommsBuf[2+4*dir+fb][56*pktsize*pkt];
-		//rBuf = {rBuf0, rBuf1, rBuf2, rBuf3, rBuf4, rBuf5, rBuf6, rBuf7};
-		//lBuf = { lBuf0, lBuf1, lBuf2, lBuf3, lBuf4, lBuf5, lBuf6, lBuf7 };
-		//hBuf = { hBuf0, hBuf1, hBuf2, hBuf3, hBuf4, hBuf5, hBuf6, hBuf7 };
-//#pragma omp critical
-		{
 //		printf("node %d thread %d : calling gauge_unpack_face_pack_gforce_dir_vec_noinline\n", myRank, tid);
 		gauge_unpack_face_pack_gforce_dir_vec_noinline( 
 			hBuf, /*hlBuf,*/ rBuf, lBuf,
@@ -785,7 +813,6 @@ static void gf_unpack_face_u(int tid, int num_cores, int threads_per_core,
 			epsilonH,
 			isBoundary
 		);
-		}
 	}
 }
 
@@ -838,8 +865,8 @@ static void gf_unpack_face_h(int tid, int num_cores, int threads_per_core, fptyp
 		const char accumulate = BTNow[4*ind];
 		if(dir!=0)
 		{
-		    hiBase[0] = (Hermit*)&hlocalBuf[2*(dir-1)+fb][112*pkt*VECLEN];
-		    hiBase[1] = (Hermit*)&hlocalBuf[2*(dir-1)+fb][(112*pkt+56)*VECLEN];
+		    hiBase[0] = (Hermit*)&((fptype *)(hlocalBuf[2*(dir-1)+fb]))[112*pkt*VECLEN];
+		    hiBase[1] = (Hermit*)&((fptype *)(hlocalBuf[2*(dir-1)+fb]))[(112*pkt+56)*VECLEN];
 		    for(int j=2; j<8; ++j)
 		    {
 			if((j>>1)!=dir && !(accumulate&(1<<j)) && !(accx&(1<<j)))
@@ -888,16 +915,14 @@ static void gf_unpack_face_u_dir( int tid, int num_cores, int threads_per_core, 
                 int z = coords[2];
                 int t = coords[3];
                 int y = yblock * nyg_pack;
-                int y0 = y;
-                int xodd = (z + t + 1-cb) & 1;
+                int xodd = (z + t + cb) & 1;
 
                 if(dir == 0) {
                         int row = (fb == 1 ? 1-xodd : xodd);
                         y += row;
-                        y0 += 1-row;
                 }
 
-		Gauge *goBase = &res[t*Pxyz + z*Pxy + y0*Vxh + x];
+		Gauge *goBase = &res[t*Pxyz + z*Pxy + y*Vxh + x];
 		fptype * __restrict rBuf = &gi[12*pktsize*pkt];
 
 		gauge_unpack_face_dir_vec_noinline(goBase, rBuf, dir*2+fb);
@@ -908,12 +933,16 @@ static void gf_unpack_face_u_dir( int tid, int num_cores, int threads_per_core, 
 {
         int nyg_pack = 1;
         if(dir == 0) nyg_pack = 2;
-	int lens1[4] = {Nxh, Ny/nyg_pack, Nz, Nt};
-	int lens[4] = {Nxh, Ny/nyg_pack, Nz, Nt};
+	int lens[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
+	int lens1[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
 	lens[dir] = 1;
-        int npkts = lens[0] * lens[1] * lens[2] * lens[3];
-        int pkts_per_core = (npkts + num_cores - 1) / num_cores;
 
+        int npkts = lens[0] * lens[1] * lens[2] * lens[3];
+	int pktsize = VECLEN;
+	if((1<<dir)<VECLEN) pktsize = VECLEN/2;
+	MYASSERT(12*pktsize*npkts == bufSizeG2[dir]);
+
+	int pkts_per_core = (npkts + num_cores - 1) / num_cores;
         int cid = tid/threads_per_core;
         int smtid = tid - threads_per_core * cid;
 
@@ -943,8 +972,24 @@ static void gf_unpack_face_u_dir( int tid, int num_cores, int threads_per_core, 
                         y += row;
                 }
 
-		for(int i=0; i<12; ++i)
-			res[(((t*Nz+z)*Ny+y)*Nx+x)*72+18*dir+i] = gi[12*pkt+i];
+                int lens0[4] = {Nxh, Ny, Nz, Nt};
+                int vi = 0;
+                for(int v=0; v<VECLEN; ++v) if((PackMask[fb][dir]>>v)&1)
+                {
+                    int coord0[4];
+                    int tmp1 = v/nGX;
+                    coord0[0] = (v-tmp1*nGX)*Vxh+x;
+                    int tmp2 = tmp1/nGY;
+                    coord0[1] = (tmp1-tmp2*nGY)*Vy+y;
+                    tmp1 = tmp2/nGZ;
+                    coord0[2] = (tmp2-tmp1*nGZ)*Vz+z;
+                    coord0[3] = tmp1*Vt+t;
+		    int ind0 = (((coord0[3]*Nz+coord0[2])*Ny+coord0[1])*Nxh+coord0[0])*72;
+		    for(int i=0; i<12; ++i)
+			res[ind0*72+18*dir+i] = gi[(12*pkt+i)*pktsize+vi];
+		    reconstruct_gauge_third_row(&res[ind0*72+18*dir], 0, 0, 0);
+		    vi++;
+		}
 	}
 }
 
@@ -955,12 +1000,13 @@ static void gf_unpack_face_h_dir( int tid, int num_cores, int threads_per_core, 
         int lens1[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
         int lens[4] = {Vxh, Vy/nyg_pack, Vz, Vt};
         lens[dir] = 1;
+
         int npkts = lens[0] * lens[1] * lens[2] * lens[3];
         int pktsize = VECLEN;
         if((1 << dir) < VECLEN) pktsize = VECLEN/2;
 	MYASSERT(8*pktsize*npkts == bufSizeH2[dir]);
-        int pkts_per_core = (npkts + num_cores - 1) / num_cores;
 
+        int pkts_per_core = (npkts + num_cores - 1) / num_cores;
         int cid = tid/threads_per_core;
         int smtid = tid - threads_per_core * cid;
 
@@ -983,16 +1029,14 @@ static void gf_unpack_face_h_dir( int tid, int num_cores, int threads_per_core, 
                 int z = coords[2];
                 int t = coords[3];
                 int y = yblock * nyg_pack;
-                int y0 = y;
-                int xodd = (z + t + 1-cb) & 1;
+                int xodd = (z + t + cb) & 1;
 
                 if(dir == 0) {
                         int row = (fb == 1 ? 1-xodd : xodd);
                         y += row;
-                        y0 += 1-row;
                 }
 
-                Hermit *hoBase = &res[t*Pxyz + z*Pxy + y0*Vxh + x];
+                Hermit *hoBase = &res[t*Pxyz + z*Pxy + y*Vxh + x];
                 fptype * __restrict rBuf = &hi[8*pktsize*pkt];
 
                 momentum_unpack_face_dir_vec_noinline(hoBase, rBuf, dir*2+fb);
@@ -1070,13 +1114,6 @@ static void gf_unpack_face_h_dir( int tid, int num_cores, int threads_per_core, 
 			ir = 1-ir;
                         res[ind0*72+18*dir+6*c1+2*c2+ir] = (-1.+2.*ir)*hi[(8*pkt+i)*pktsize+indv];
 			res[ind0*72+18*dir+6*c2+2*c1+ir] = hi[(8*pkt+i)*pktsize+indv];
-#if 0
-#pragma omp critical
-			{
-			if(res[ind0*72+18*dir+6*c2+2*c1+ir]!=0.)
-				printf("rank %d thread %d : res[%d][%d][%d] = %f\n", myRank, tid, ind0, dir, 6*c2+2*c1+ir, res[ind0*72+18*dir+6*c2+2*c1+ir]);
-			}
-#endif
 		    }
 		    for(int i=0; i<3; ++i)
 			res[ind0*72+18*dir+i*8] = 0.0;
@@ -1100,7 +1137,7 @@ void pack_gauge_face_dir(int tid, Gauge *gi, int dir, int cb)
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
         t0 = __rdtsc();
-        gf_pack_face_u_dir(tid, NCores, n_threads_per_core, gi, gcommsBuf2[8+dir], cb, dir>>1, dir&1);
+        gf_pack_face_u_dir(tid, NCores, n_threads_per_core, gi, (fptype *)gcommsBuf2[8+dir], cb, dir>>1, dir&1);
         t1 = __rdtsc();
         tt_pack[tid][dir] += (t1 - t0);
         gBar->wait(tid);
@@ -1129,11 +1166,10 @@ void pack_gauge_face_dir(int tid, fptype *gi, int dir, int cb)
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
         t0 = __rdtsc();
-        gf_pack_face_u_dir(tid, NCores, n_threads_per_core, gi, gcommsBuf2[8+dir], cb, dir>>1, dir&1);
+        gf_pack_face_u_dir(tid, NCores, n_threads_per_core, gi, (fptype *)gcommsBuf2[8+dir], cb, dir>>1, dir&1);
         t1 = __rdtsc();
         tt_pack[tid][dir] += (t1 - t0);
         gBar->wait(tid);
-//#pragma omp barrier
         if(tid == 0) {
                 t1 = __rdtsc();
                 t_boundary[0][dir] += (t1 - t0);
@@ -1159,7 +1195,7 @@ void pack_momentum_face_dir(int tid, Hermit *hi, int dir, int cb)
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
         t0 = __rdtsc();
-        gf_pack_face_h_dir(tid, NCores, n_threads_per_core, hi, hcommsBuf2[8+dir], cb, dir>>1, dir&1);
+        gf_pack_face_h_dir(tid, NCores, n_threads_per_core, hi, (fptype *)hcommsBuf2[8+dir], cb, dir>>1, dir&1);
         t1 = __rdtsc();
         tt_pack[tid][dir] += (t1 - t0);
         gBar->wait(tid);
@@ -1187,11 +1223,10 @@ void pack_momentum_face_dir(int tid, fptype *hi, int dir, int cb)
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
         t0 = __rdtsc();
-        gf_pack_face_h_dir(tid, NCores, n_threads_per_core, hi, hcommsBuf2[8+dir], cb, dir>>1, dir&1);
+        gf_pack_face_h_dir(tid, NCores, n_threads_per_core, hi, (fptype *)hcommsBuf2[8+dir], cb, dir>>1, dir&1);
         t1 = __rdtsc();
         tt_pack[tid][dir] += (t1 - t0);
         gBar->wait(tid);
-//#pragma omp barrier
         if(tid == 0) {
                 t1 = __rdtsc();
                 t_boundary[0][dir] += (t1 - t0);
@@ -1215,10 +1250,9 @@ void unpack_gauge_face_dir(int tid, Gauge *go, int dir, int cb)
         t_boundary[5][dir] += (t1 - t0);
     }
     gBar->wait(tid);
-//#pragma omp barrier
     t0 = __rdtsc();
 #ifndef NO_COMPUTE
-    gf_unpack_face_u_dir(tid, NCores, n_threads_per_core, gcommsBuf2[dir], go, cb, dir>>1, dir&1);
+    gf_unpack_face_u_dir(tid, NCores, n_threads_per_core, (fptype *)gcommsBuf2[dir], go, cb, dir>>1, dir&1);
 #endif
     t2 = __rdtsc();
     tt_unpack[tid][dir] += (t2 - t0);
@@ -1236,10 +1270,9 @@ void unpack_gauge_face_dir(int tid, fptype *go, int dir, int cb)
         t_boundary[5][dir] += (t1 - t0);
     }
     gBar->wait(tid);
-//#pragma omp barrier
     t0 = __rdtsc();
 #ifndef NO_COMPUTE
-    gf_unpack_face_u_dir(tid, NCores, n_threads_per_core, gcommsBuf2[dir], go, cb, dir>>1, dir&1);
+    gf_unpack_face_u_dir(tid, NCores, n_threads_per_core, (fptype *)gcommsBuf2[dir], go, cb, dir>>1, dir&1);
 #endif
     t2 = __rdtsc();
     tt_unpack[tid][dir] += (t2 - t0);
@@ -1257,10 +1290,9 @@ void unpack_momentum_face_dir(int tid, Hermit *ho, int dir, int cb)
         t_boundary[5][dir] += (t1 - t0);
     }
     gBar->wait(tid);
-//#pragma omp barrier
     t0 = __rdtsc();
 #ifndef NO_COMPUTE
-    gf_unpack_face_h_dir(tid, NCores, n_threads_per_core, hcommsBuf2[dir], ho, cb, dir>>1, dir&1);
+    gf_unpack_face_h_dir(tid, NCores, n_threads_per_core, (fptype *)hcommsBuf2[dir], ho, cb, dir>>1, dir&1);
 #endif
     t2 = __rdtsc();
     tt_unpack[tid][dir] += (t2 - t0);
@@ -1281,7 +1313,7 @@ void unpack_momentum_face_dir(int tid, fptype *ho, int dir, int cb)
 //#pragma omp barrier
     t0 = __rdtsc();
 #ifndef NO_COMPUTE
-    gf_unpack_face_h_dir(tid, NCores, n_threads_per_core, hcommsBuf2[dir], ho, cb, dir>>1, dir&1);
+    gf_unpack_face_h_dir(tid, NCores, n_threads_per_core, (fptype *)hcommsBuf2[dir], ho, cb, dir>>1, dir&1);
 #endif
     t2 = __rdtsc();
     tt_unpack[tid][dir] += (t2 - t0);
@@ -1309,7 +1341,7 @@ void gf_pack_and_send_boundaries_u(int tid, Gauge *gi, int cb)
 	for(int fb=0; fb<2; ++fb) {
 		t0 = __rdtsc();
 #ifndef NO_COMPUTE
-		gf_pack_face_u(tid, NCores, n_threads_per_core, gi, gcommsBuf[2+4*d+fb], cb, d, fb);
+		gf_pack_face_u(tid, NCores, n_threads_per_core, gi, (fptype *)gcommsBuf[2+4*d+fb], cb, d, fb);
 #endif
 		t1 = __rdtsc();
 		tt_pack[tid][2*d+fb] += (t1 - t0);
@@ -1350,7 +1382,7 @@ void gf_recv_and_unpack_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp
 //#pragma omp barrier
 	    t0 = __rdtsc();
 #ifndef NO_COMPUTE
-	    gf_unpack_face_h(tid, NCores, n_threads_per_core, hcommsBuf[4*d+fb], hio, htmp, cb, d, fb, accx);
+	    gf_unpack_face_h(tid, NCores, n_threads_per_core, (fptype *)hcommsBuf[4*d+fb], hio, htmp, cb, d, fb, accx);
 #endif
 	    t1 =  __rdtsc();
 	    tt_unpack[tid][2*d+fb] += (t1 - t0);
@@ -1393,9 +1425,9 @@ void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelp
 		    fflush(stdout);
 		}
 */
-		gf_unpack_face_u(tid, NCores, n_threads_per_core, gcommsBuf[4*d+fb], gtmpbuf, gio, hio, htmp, kappaS, kappaR, kappaB, epsilonH, accumulate, cb, d, fb);
+		gf_unpack_face_u(tid, NCores, n_threads_per_core, (fptype *)gcommsBuf[4*d+fb], gtmpbuf, gio, hio, htmp, kappaS, kappaR, kappaB, epsilonH, accumulate, cb, d, fb);
 #endif
-		gtmpbuf[2*d+fb] = gcommsBuf[4*d+fb];
+		gtmpbuf[2*d+fb] = (fptype *)gcommsBuf[4*d+fb];
 
 		t2 = __rdtsc();
 		tt_unpack[tid][2*d+fb] += (t2 - t0);
