@@ -44,7 +44,7 @@ else
 OPTFLAGS = -O3
 endif
 
-CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I../qphix-codegen
+CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I../milc-qphix-codegen
 
 CXXFLAGS += -parallel-source-info=2 -debug inline-debug-info -qopt-report=5
 
@@ -167,9 +167,9 @@ DEFS += $(strip $(foreach var, $(deflist), $(if $($(var)), -D$(var)=$($(var)))))
 #LIBQPHIXMILC_SRC= ks_long_dslash.cpp ks_d_congrad_fn.cpp  ks_d_congrad_fn_two_src.cpp ks_blas_utils_c.cpp hrtimer.cpp                 
 LIBQPHIXMILC_SRC= ks_long_dslash.cpp ks_d_congrad_fn.cpp ks_multicg_offset.cpp ks_blas_utils_c.cpp hrtimer.cpp qphix_f3.cpp qphix_d3.cpp qphix_misc.cpp  ks_boundary.cpp
 
-LIBQPHIXMILC_SRC+= gauge_force_imp.cpp gf_boundary.cpp gauge_force_imp_complete_specialization.cpp
+#LIBQPHIXMILC_SRC+= gauge_force_imp.cpp gf_boundary.cpp gauge_force_imp_complete_specialization.cpp
 
-HEADERS = Barrier.h dslash_mic_complete_specialization.h gauge_force_imp_complete_specialization.h gauge_force_imp.h gf_boundary.h hrtimer.h ks_blas_utils_c.h ks_boundary.h ks_cg_perf_profiler.h  ks_config.h ks_globals.h phaser.h qcd_data_types.h qphix_d3.h qphix_f3.h qphix.h qphix_internal.h qphix_int.h qphix_types.h stopwatch.h ubench_helper.h utils.h qphix_d3_generic.h qphix_d3_internal.h qphix_f3_generic.h qphix_f3_internal.h ks_long_dslash.h macros.h
+HEADERS = Barrier.h dslash_mic_complete_specialization.h hrtimer.h ks_blas_utils_c.h ks_boundary.h ks_cg_perf_profiler.h  ks_config.h ks_globals.h phaser.h qcd_data_types.h qphix_d3.h qphix_f3.h qphix.h qphix_internal.h qphix_int.h qphix_types.h stopwatch.h ubench_helper.h utils.h qphix_d3_generic.h qphix_d3_internal.h qphix_f3_generic.h qphix_f3_internal.h ks_long_dslash.h macros.h
 
 all: $(TARGET)
 
@@ -218,28 +218,7 @@ ks_dslash_complete_specialization.fo: ks_dslash_complete_specialization.cpp ${HE
 ks_dslash_complete_specialization.do: ks_dslash_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c ks_dslash_complete_specialization.cpp -o ks_dslash_complete_specialization.do $(CMLLDFLAGS)
 
-gauge_force_imp.fo: gauge_force_imp.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gauge_force_imp.cpp -o gauge_force_imp.fo $(CMLLDFLAGS)
-
-gauge_force_imp.do: gauge_force_imp.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gauge_force_imp.cpp -o gauge_force_imp.do $(CMLLDFLAGS)
-
-gf_boundary.fo: gf_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gf_boundary.cpp -o gf_boundary.fo $(CMLLDFLAGS)
-
-gf_boundary.do: gf_boundary.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gf_boundary.cpp -o gf_boundary.do $(CMLLDFLAGS)
-
-gauge_force_imp_complete_specialization.fo: gauge_force_imp_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c gauge_force_imp_complete_specialization.cpp -o gauge_force_imp_complete_specialization.fo $(CMLLDFLAGS)
-
-gauge_force_imp_complete_specialization.do: gauge_force_imp_complete_specialization.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -c gauge_force_imp_complete_specialization.cpp -o gauge_force_imp_complete_specialization.do $(CMLLDFLAGS)
-
-
 OBJECTS= ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do qphix_misc.fo qphix_misc.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do
-
-OBJECTS+= gauge_force_imp.fo gauge_force_imp.do gf_boundary.fo gf_boundary.do gauge_force_imp_complete_specialization.fo gauge_force_imp_complete_specialization.do
 
 qphix_f3.o: qphix_f3.cpp ${HEADERS} $(MAKEFILE) customMake.$(mode)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_f3.cpp -o qphix_f3.o $(CMLLDFLAGS)
@@ -257,7 +236,7 @@ ks_long_dslash: ks_dslash_complete_specialization.h ${LIBQPHIXMILC_SRC} $(MAKEFI
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) hrtimer.cpp -c  $(CMLLDFLAGS)
 	#ar rvs libqphixmilc.a ks_long_dslash.o ks_blas_utils_c.o ks_d_congrad_fn.o ks_d_congrad_fn_two_src.o hrtimer.o
 	#ar rvs libqphixmilc.a ks_long_dslash.o ks_blas_utils_c.o ks_d_congrad_fn.o hrtimer.o
-	ar rvs ${QPHIXLIB} ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do qphix_f3.o qphix_d3.o hrtimer.o qphix_misc.fo qphix_misc.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do gauge_force_imp.fo gauge_force_imp.do gf_boundary.fo gf_boundary.do gauge_force_imp_complete_specialization.fo gauge_force_imp_complete_specialization.do
+	ar rvs ${QPHIXLIB} ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do qphix_f3.o qphix_d3.o hrtimer.o qphix_misc.fo qphix_misc.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do 
 	#ar rvs ${QPHIXLIB} ks_long_dslash.fo ks_long_dslash.do ks_blas_utils_c.fo ks_blas_utils_c.do ks_d_congrad_fn.fo ks_d_congrad_fn.do ks_multicg_offset.fo ks_multicg_offset.do qphix_f3.o qphix_d3.o hrtimer.o qphix_misc.fo qphix_misc.do ks_boundary.fo ks_boundary.do ks_dslash_complete_specialization.fo ks_dslash_complete_specialization.do 
 
 clean: 
