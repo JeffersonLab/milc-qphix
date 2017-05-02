@@ -9,7 +9,7 @@
 Dependency: 
 
 For gauge force use both milc-qphix-codegen and milc-qphix gauge_force branch
-For CG only use milc-qphix-codegen master branch (will update milc-qhpix master branch for CG only)
+For CG only use milc-qphix-codegen master branch (updated milc-qhpix master branch for CG only)
 
 /*********************/
 
