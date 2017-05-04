@@ -1506,7 +1506,7 @@ void gf_recv_and_unpack_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp
 /* Not supported */
 }
 
-void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp, Gauge *gio, int cb)
+void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp, Gauge *gio, fptype kappaS, fptype kappaR, fptype kappaB, fptype epsilonH, int cb)
 {
 /* Not supported */
 }
