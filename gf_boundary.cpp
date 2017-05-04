@@ -50,7 +50,7 @@ void unpack_momentum_face_dir(int tid, fptype *ho, int dir, int cb){}
 
 void gf_pack_and_send_boundaries_u(int tid, Gauge *gi, int cb){}
 void gf_recv_and_unpack_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp, Gauge *gio, int cb){}
-void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp, Gauge *gio, int cb){}
+void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelperYZT *htmp, Gauge *gio, fptype kappaS, fptype kappaR, fptype kappaB, fptype epsilonH, int cb){}
 #if QPHIX_PrecisionInt == 1
 void gf_print_boundary_timings(unsigned long long t_gf){}
 #endif
