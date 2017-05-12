@@ -44,7 +44,7 @@ else
 OPTFLAGS = -O3
 endif
 
-CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I../qphix-codegen
+CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I../milc-qphix-codegen
 
 CXXFLAGS += -parallel-source-info=2 -debug inline-debug-info -qopt-report=5
 
