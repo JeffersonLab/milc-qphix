@@ -197,7 +197,8 @@ QPHIX_D3_GaugeField
 
     Gauge *dest = (Gauge *)gf->geo;
     fptype *rawsrcp;
-    if(evenodd & QPHIX_ODD) rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
+    //if(evenodd & QPHIX_ODD) rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
+    rawsrcp = rawsrc + 72*qphix_even_sites_on_node;
 #ifdef _OPENMP
 #pragma omp parallel default(shared) num_threads(nThreads)
 #endif
@@ -209,7 +210,8 @@ QPHIX_D3_GaugeField
 #endif
     if(gf->parity == QPHIX_EVEN)
     {
-        if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+        /*if(evenodd & QPHIX_ODD)*/ 
+	for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
         {
             pack_gauge_face_dir(tid, rawsrcp, 2*dir+1, 1);
         }
@@ -260,18 +262,23 @@ QPHIX_D3_GaugeField
 	    	for(int c2=0; c2<3; ++c2) for(int ir=0; ir<2; ++ir) 
 	    	{
 		    dest[ind][2*d+1][c1][c2][ir][v] = rawsrc[72*i+18*d+c1*6+c2*2+ir];
-		    if(evenodd & QPHIX_ODD)
+		    //if(evenodd & QPHIX_ODD)
 			dest[ind][2*d][c1][c2][ir][v] = rawsrcp[backi*72+18*d+c1*6+c2*2+ir];
 		}
 	    }
 	}
-	if(evenodd & QPHIX_ODD) for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+	/*if(evenodd & QPHIX_ODD)*/
+ 	for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
         {
             unpack_gauge_face_dir(tid, dest, 2*dir, 0);
         }
     }
     else
     {
+	for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+	{
+	    pack_gauge_face_dir(tid, rawsrc, 2*dir+1, 0);
+	}
     	for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
     	{
             int y = i / Nxh;
@@ -289,10 +296,27 @@ QPHIX_D3_GaugeField
 
             int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
-	    int xodd = (y + z + t + 1) & 1;
+	    int xodd = (y + z + t) & 1;
 
             for(int d=0; d<4; ++d)
 	    {
+                int backi = i;
+                if(d==0) {
+                    backi -= xodd;
+                    if(xodd==1 && x==0) backi += Nxh;
+                }
+                else if(d==1) {
+                    backi -= Nxh;
+                    if(y==0) backi += Nxh*Ny;
+                }
+                else if(d==2) {
+                    backi -= Nxh*Ny;
+                    if(z==0) backi += Nxh*Ny*Nz;
+                }
+                else {
+                    backi -= Nxh*Ny*Nz;
+                    if(t==0) backi += Nxh*Ny*Nz*Nt;
+                }
 #if COMPRESSED_12
             	for(int c1=0; c1<2; ++c1)
 #else
@@ -301,8 +325,13 @@ QPHIX_D3_GaugeField
             	for(int c2=0; c2<3; ++c2) for(int ir=0; ir<2; ++ir)
             	{
                     dest[ind][2*d+1][c1][c2][ir][v] = rawsrcp[72*i+18*d+c1*6+c2*2+ir];
+		    dest[ind][2*d][c1][c2][ir][v] = rawsrc[72*backi+18*d+c1*6+c2*2+ir];
 		}
             }
+	}
+	for(int dir=0; dir<4; ++dir) if(!local_dir[dir])
+	{
+	    unpack_gauge_face_dir(tid, dest, 2*dir, 1);
 	}
     }
     } /* openmp */
