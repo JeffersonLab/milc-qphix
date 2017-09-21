@@ -986,8 +986,8 @@ static void gf_unpack_face_u_dir( int tid, int num_cores, int threads_per_core, 
                     coord0[3] = tmp1*Vt+t;
 		    int ind0 = (((coord0[3]*Nz+coord0[2])*Ny+coord0[1])*Nxh+coord0[0])*72;
 		    for(int i=0; i<12; ++i)
-			res[ind0*72+18*dir+i] = gi[(12*pkt+i)*pktsize+vi];
-		    reconstruct_gauge_third_row(&res[ind0*72+18*dir], 0, 0, 0);
+			res[ind0+18*dir+i] = gi[(12*pkt+i)*pktsize+vi];
+		    reconstruct_gauge_third_row(&res[ind0+18*dir], 0, 0, 0);
 		    vi++;
 		}
 	}
