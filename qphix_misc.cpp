@@ -465,8 +465,10 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
 
     int m_coord[4], n_coord[8];
     const int mdim = layout->machdim;
-    lex_coords(m_coord, mdim, geometry, (const size_t)myRank);
-    neigh_lex_coords(n_coord, (const int)layout->latdim, geometry, (const size_t)myRank, layout->node_number);
+    //lex_coords(m_coord, mdim, geometry, (const size_t)myRank);
+    lex_coords(m_coord, mdim, geometry, myRank);
+    //neigh_lex_coords(n_coord, (const int)layout->latdim, geometry, (const size_t)myRank, layout->node_number);
+    neigh_lex_coords(n_coord, layout->latdim, geometry, myRank, layout->node_number);
 
     setup_comms( m_coord, n_coord );
     gf_setup_comms();

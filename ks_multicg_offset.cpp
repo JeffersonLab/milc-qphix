@@ -352,6 +352,7 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 	MYASSERT(pm[j]!=0x00);
     }
 
+/*
     shifts = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     zeta_i = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     zeta_im1 = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
@@ -359,6 +360,14 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
     beta_i = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     beta_im1 = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     alpha = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
+*/
+    shifts = (fptype * )malloc(num_offsets*sizeof(fptype));
+    zeta_i = (fptype * )malloc(num_offsets*sizeof(fptype));
+    zeta_im1 = (fptype * )malloc(num_offsets*sizeof(fptype));
+    zeta_ip1 = (fptype * )malloc(num_offsets*sizeof(fptype));
+    beta_i = (fptype * )malloc(num_offsets*sizeof(fptype));
+    beta_im1 = (fptype * )malloc(num_offsets*sizeof(fptype));
+    alpha = (fptype * )malloc(num_offsets*sizeof(fptype));
 
     finished = (int *)malloc(sizeof(int)*num_offsets);
 #if TIME_CG
