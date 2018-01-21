@@ -13,7 +13,7 @@ CONFFILE=customMake.$(mode)
 include $(CONFFILE)
 
 # 1 for cray machine
-CRAY= 1
+#CRAY= 1
 
 ENABLE_MPI= 1
 
@@ -63,9 +63,17 @@ ifeq ($(ENABLE_MPI),1)
 QPHIXLIB=libqphixmilc_mic.a
 endif
 ifeq ($(AVX512),1)
+ifeq ($(SKX),1)
+QPHIXLIB=libqphixmilc_skx_single.a
+else
 QPHIXLIB=libqphixmilc_avx512_single.a
+endif
 ifeq ($(ENABLE_MPI),1)
+ifeq ($(SKX),1)
+QPHIXLIB=libqphixmilc_skx.a
+else
 QPHIXLIB=libqphixmilc_avx512.a
+endif
 endif
 endif
 #override VECLEN=16
@@ -125,7 +133,11 @@ ifeq ($(mode),mic)
 ifneq ($(AVX512),1)
 MPSSFLAGS = -mmic -mGLOB_default_function_attrs="use_gather_scatter_hint=off"
 else
+ifeq ($(SKX),1)
+MPSSFLAGS = -xCORE-AVX512 #-qopt-zmm-usage=high
+else
 MPSSFLAGS = -xMIC-AVX512
+endif
 yesnolist += AVX512
 endif
 endif
