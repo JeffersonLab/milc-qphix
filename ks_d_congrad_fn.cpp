@@ -579,7 +579,8 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
     res_arg->final_iter   = total_iters;
     res_arg->final_restart = nrestart;
 
-    if(myRank==0) if(nrestart == max_restarts || iteration == max_cg) {
+    if(myRank==0) //if(nrestart == max_restarts || iteration == max_cg) {
+	if(iteration == max_cg) {
         if(omp_get_thread_num() == 0) {
             std::cout << "qphix_congrad: CG not converged after " << iteration
                       << " iterations and " << nrestart << " restarts, \n"
