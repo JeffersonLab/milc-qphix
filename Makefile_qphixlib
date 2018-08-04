@@ -20,7 +20,7 @@ ENABLE_MPI= 1
 ifeq ($(CRAY),1)
   ifeq ($(ENABLE_MPI),1)
   ifneq ($(ASSUME_MULTINODE),1)
-    CXX = CC
+    CXX = ${PK_CXX}
   else
     CXX = icpc
   endif
@@ -30,7 +30,7 @@ ifeq ($(CRAY),1)
 else
 ifeq ($(ENABLE_MPI),1)
 ifneq ($(ASSUME_MULTINODE),1)
-CXX = mpiicpc
+CXX = ${PK_CXX}
 else
 CXX = icpc
 endif
