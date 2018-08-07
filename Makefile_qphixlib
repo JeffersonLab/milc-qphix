@@ -2,8 +2,6 @@ MAKEFILE= Makefile_qphixlib
 
 TARGET=ks_long_dslash
 #DEBUG=1
-mode=mic 
-#mode=avx
 
 #CODEGEN_PATH=./
 
@@ -11,6 +9,12 @@ mode:=$(strip $(mode))
 
 CONFFILE=customMake.$(mode)
 include $(CONFFILE)
+
+ifeq ($(strip ${ARCH}),skx)
+  SKX=1
+else
+  SKX=0
+endif
 
 # 1 for cray machine
 #CRAY= 1

@@ -2,7 +2,6 @@ mode=mic
 SOALEN=8
 #PRECISION=1
 AVX512= 1
-SKX= 0
 
 # Lattice Dimensions in Y, Z and T
 BY=2
