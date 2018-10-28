@@ -416,6 +416,19 @@ static void neigh_lex_coords(int coords[], const int latdim, const int size[], c
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
 
+#ifdef ENABLE_MPI
+static void
+err_func(int *stat)
+{
+  int len;
+  char err_string[MPI_MAX_ERROR_STRING];
+
+  printf("MPI error number: %i\n", *stat);
+  MPI_Error_string(*stat, err_string, &len);
+  printf("%s\n", err_string);
+}
+#endif
+
 QPHIX_status_t 
 QPHIX_init_fptype(QPHIX_layout_t *layout)
 {
@@ -460,7 +473,17 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
 	return QPHIX_FAIL;
     }
 #else
-    MPI_Barrier(MPI_COMM_WORLD);    
+    /* If a communicator is provided (layout->mpi_comm is not NULL),
+       we use it. Otherwise, we create our own later on */
+    MPI_COMM_THISJOB = *((MPI_Comm *)layout->mpi_comm);
+    if(layout->mpi_comm){
+      printf("Setting MPI_COMM_THISJOB from layout structure\n");
+      int flag = MPI_Barrier(MPI_COMM_THISJOB);    
+      if(flag != MPI_SUCCESS) {
+	err_func(&flag);
+	return QPHIX_FAIL;
+      }
+    }
 #endif
 
     int m_coord[4], n_coord[8];

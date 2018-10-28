@@ -1132,7 +1132,7 @@ void pack_gauge_face_dir(int tid, Gauge *gi, int dir, int cb)
 	long bufsize = 6*Nx*Ny*Nz*Nt/nv[dir>>1];
         if(tid == 0) {
                 t0 = __rdtsc();
-                MYASSERT(MPI_Irecv((void *)gcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_U_MPI_RECV_TAG((dir&1)^1), MPI_COMM_WORLD, &reqRecvsU[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
+                MYASSERT(MPI_Irecv((void *)gcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_U_MPI_RECV_TAG((dir&1)^1), MPI_COMM_THISJOB, &reqRecvsU[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
                 t1 = __rdtsc();
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
@@ -1146,7 +1146,7 @@ void pack_gauge_face_dir(int tid, Gauge *gi, int dir, int cb)
 		t1 = __rdtsc();
                 t_boundary[0][dir] += (t1 - t0);
 #ifndef ASSUME_MULTINODE
-                MYASSERT(MPI_Isend((void *)gcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_U_MPI_SEND_TAG(dir&1), MPI_COMM_WORLD, &reqSendsU[dir]) == MPI_SUCCESS);
+                MYASSERT(MPI_Isend((void *)gcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_U_MPI_SEND_TAG(dir&1), MPI_COMM_THISJOB, &reqSendsU[dir]) == MPI_SUCCESS);
 #endif
                 t0 = __rdtsc();
                 t_boundary[2][dir] += (t0 - t1);
@@ -1161,7 +1161,7 @@ void pack_gauge_face_dir(int tid, fptype *gi, int dir, int cb)
         long bufsize = 6*Nx*Ny*Nz*Nt/nv[dir>>1];
         if(tid == 0) {
                 t0 = __rdtsc();
-                MYASSERT(MPI_Irecv((void *)gcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_U_MPI_RECV_TAG((dir&1)^1), MPI_COMM_WORLD, &reqRecvsU[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
+                MYASSERT(MPI_Irecv((void *)gcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_U_MPI_RECV_TAG((dir&1)^1), MPI_COMM_THISJOB, &reqRecvsU[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
                 t1 = __rdtsc();
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
@@ -1174,7 +1174,7 @@ void pack_gauge_face_dir(int tid, fptype *gi, int dir, int cb)
                 t1 = __rdtsc();
                 t_boundary[0][dir] += (t1 - t0);
 #ifndef ASSUME_MULTINODE
-                MYASSERT(MPI_Isend((void *)gcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_U_MPI_SEND_TAG(dir&1), MPI_COMM_WORLD, &reqSendsU[dir]) == MPI_SUCCESS);
+                MYASSERT(MPI_Isend((void *)gcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_U_MPI_SEND_TAG(dir&1), MPI_COMM_THISJOB, &reqSendsU[dir]) == MPI_SUCCESS);
 #endif
                 t0 = __rdtsc();
                 t_boundary[2][dir] += (t0 - t1);
@@ -1189,7 +1189,7 @@ void pack_momentum_face_dir(int tid, Hermit *hi, int dir, int cb)
         if(tid == 0) {
                 t0 = __rdtsc();
 		//printf("rank %d : start receiving momentum from node %d... d = %d\n", myRank, neigh_ranks[QPHIX_OPP_DIR(dir)], QPHIX_OPP_DIR(dir));
-		MYASSERT(MPI_Irecv((void *)hcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_H_MPI_RECV_TAG((dir&1)^1), MPI_COMM_WORLD, &reqRecvsH[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
+		MYASSERT(MPI_Irecv((void *)hcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_H_MPI_RECV_TAG((dir&1)^1), MPI_COMM_THISJOB, &reqRecvsH[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
 		//printf("rankd %d : done start receiving momentum from node %d... d = %d\n", myRank, neigh_ranks[QPHIX_OPP_DIR(dir)], QPHIX_OPP_DIR(dir));
 		t1 = __rdtsc();
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
@@ -1204,7 +1204,7 @@ void pack_momentum_face_dir(int tid, Hermit *hi, int dir, int cb)
                 t1 = __rdtsc();
                 t_boundary[0][dir] += (t1 - t0);
 #ifndef ASSUME_MULTINODE
-                MYASSERT(MPI_Isend((void *)hcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_H_MPI_SEND_TAG(dir&1), MPI_COMM_WORLD, &reqSendsH[dir]) == MPI_SUCCESS);
+                MYASSERT(MPI_Isend((void *)hcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_H_MPI_SEND_TAG(dir&1), MPI_COMM_THISJOB, &reqSendsH[dir]) == MPI_SUCCESS);
 #endif
                 t0 = __rdtsc();
                 t_boundary[2][dir] += (t0 - t1);
@@ -1218,7 +1218,7 @@ void pack_momentum_face_dir(int tid, fptype *hi, int dir, int cb)
         long bufsize = 4*Nx*Ny*Nz*Nt/nv[dir>>1];
         if(tid == 0) {
                 t0 = __rdtsc();
-                MYASSERT(MPI_Irecv((void *)hcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_H_MPI_RECV_TAG((dir&1)^1), MPI_COMM_WORLD, &reqRecvsH[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
+                MYASSERT(MPI_Irecv((void *)hcommsBuf2[QPHIX_OPP_DIR(dir)], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[QPHIX_OPP_DIR(dir)], GF_H_MPI_RECV_TAG((dir&1)^1), MPI_COMM_THISJOB, &reqRecvsH[QPHIX_OPP_DIR(dir)]) == MPI_SUCCESS);
                 t1 = __rdtsc();
                 t_boundary[3][QPHIX_OPP_DIR(dir)] += (t1 - t0);
         }
@@ -1231,7 +1231,7 @@ void pack_momentum_face_dir(int tid, fptype *hi, int dir, int cb)
                 t1 = __rdtsc();
                 t_boundary[0][dir] += (t1 - t0);
 #ifndef ASSUME_MULTINODE
-                MYASSERT(MPI_Isend((void *)hcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_H_MPI_SEND_TAG(dir&1), MPI_COMM_WORLD, &reqSendsH[dir]) == MPI_SUCCESS);
+                MYASSERT(MPI_Isend((void *)hcommsBuf2[8+dir], bufsize*sizeof(fptype), MPI_BYTE, neigh_ranks[dir], GF_H_MPI_SEND_TAG(dir&1), MPI_COMM_THISJOB, &reqSendsH[dir]) == MPI_SUCCESS);
 #endif
                 t0 = __rdtsc();
                 t_boundary[2][dir] += (t0 - t1);
@@ -1332,7 +1332,7 @@ void gf_pack_and_send_boundaries_u(int tid, Gauge *gi, int cb)
 	  //for(int fb = 1; fb >= 0; fb--) {
 	  for(int fb=0; fb<2; ++fb) {
 		t0 = __rdtsc();
-		MYASSERT(MPI_Irecv((void *)gcommsBuf[4*d+fb], bufSizeG[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_U_MPI_RECV_TAG(fb), MPI_COMM_WORLD, &reqRecvs[2*d+fb]) == MPI_SUCCESS);
+		MYASSERT(MPI_Irecv((void *)gcommsBuf[4*d+fb], bufSizeG[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_U_MPI_RECV_TAG(fb), MPI_COMM_THISJOB, &reqRecvs[2*d+fb]) == MPI_SUCCESS);
 		t1 = __rdtsc();
 		t_boundary[3][2*d+fb] += (t1 - t0);
 	  }
@@ -1351,7 +1351,7 @@ void gf_pack_and_send_boundaries_u(int tid, Gauge *gi, int cb)
 			t1 = __rdtsc();
 			t_boundary[0][2*d+fb] += (t1 - t0);
 #ifndef ASSUME_MULTINODE
-			MYASSERT(MPI_Isend((void *)gcommsBuf[2+4*d+fb], bufSizeG[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_U_MPI_SEND_TAG(fb), MPI_COMM_WORLD, &reqSends[2*d+fb]) == MPI_SUCCESS);
+			MYASSERT(MPI_Isend((void *)gcommsBuf[2+4*d+fb], bufSizeG[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_U_MPI_SEND_TAG(fb), MPI_COMM_THISJOB, &reqSends[2*d+fb]) == MPI_SUCCESS);
 #endif
 			t0 = __rdtsc();
 			t_boundary[2][2*d+fb] += (t0 - t1);
@@ -1408,7 +1408,7 @@ void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelp
 		    t0 = __rdtsc();
 #ifndef ASSUME_MULTINODE
 		    MYASSERT(MPI_Wait(&reqRecvs[2*d+fb], MPI_STATUS_IGNORE) == MPI_SUCCESS);
-		    MYASSERT(MPI_Irecv((void *)hcommsBuf[4*d+fb], bufSizeH[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_H_MPI_RECV_TAG(fb), MPI_COMM_WORLD, &reqRecvs[8+2*d+fb]) == MPI_SUCCESS);
+		    MYASSERT(MPI_Irecv((void *)hcommsBuf[4*d+fb], bufSizeH[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_H_MPI_RECV_TAG(fb), MPI_COMM_THISJOB, &reqRecvs[8+2*d+fb]) == MPI_SUCCESS);
 #endif
 		    t1 = __rdtsc();
 		    t_boundary[5][2*d+fb] += (t1 - t0);
@@ -1443,7 +1443,7 @@ void gf_recv_and_unpack_u_and_send_boundaries_h(int tid, Hermit *hio, HermitHelp
             for(int fb = 0; fb < 2; fb++) {
                     t0 = __rdtsc();
 #ifndef ASSUME_MULTINODE
-		    MYASSERT(MPI_Isend((void *)hcommsBuf[2+4*d+fb], bufSizeH[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_H_MPI_SEND_TAG(fb), MPI_COMM_WORLD, &reqSends[8+2*d+fb]) == MPI_SUCCESS);
+		    MYASSERT(MPI_Isend((void *)hcommsBuf[2+4*d+fb], bufSizeH[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], GF_H_MPI_SEND_TAG(fb), MPI_COMM_THISJOB, &reqSends[8+2*d+fb]) == MPI_SUCCESS);
 #endif
 		    t2 = __rdtsc();
 		    t_boundary[1][2*d+fb] += (t2 - t0);	

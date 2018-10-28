@@ -1,11 +1,11 @@
+#ifdef ENABLE_MPI
+#include <mpi.h>
+#endif
 #include "ks_blas_utils_c.h"
 #include "ks_config.h"  /* macros */
 #include "ks_globals.h" /* All global vars and macros (Nt, Nz, Nx, Ny etc.) */
 #include <math.h>
 
-#ifdef ENABLE_MPI
-#include <mpi.h>
-#endif
 
 /* Squaring the magnitude of a VECLEN array of spinors. */
 double
@@ -103,7 +103,7 @@ g_doublesum (double *d)
 {
 #ifdef ENABLE_MPI
     double work = *d;
-    MPI_Allreduce( &work, d, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+    MPI_Allreduce( &work, d, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_THISJOB );
 #endif
 }
 #endif

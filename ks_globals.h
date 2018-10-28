@@ -41,6 +41,11 @@ extern int nRanks;
 extern char * BoundTableF, * BoundTableD;
 extern unsigned int * NeighTableF, * NeighTableD;
 extern int BLENGTHF, BLENGTHD, PadBoundF, PadBoundD, PadNeighF, PadNeighD;
+
+#ifdef ENABLE_MPI
+#include <mpi.h>
+extern MPI_Comm MPI_COMM_THISJOB;
+#endif
  
 
 #include "macros.h"

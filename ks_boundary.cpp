@@ -148,19 +148,35 @@ face_pkt_info *pkt_info_buf[4];
 #endif
 
 void setup_cml_thread_groups(void);
-
 #if QPHIX_PrecisionInt == 1
+
+#ifdef ENABLE_MPI
+static void
+err_func(int *stat)
+{
+  int len;
+  char err_string[MPI_MAX_ERROR_STRING];
+
+  printf("MPI error number: %i\n", *stat);
+  MPI_Error_string(*stat, err_string, &len);
+  printf("%s\n", err_string);
+}
+#endif
 
 void setup_mpi(int argc, char *argv[])
 {
 #ifndef ASSUME_MULTINODE
-	int MPI_threadingModel = -1;
-	MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &MPI_threadingModel);
-	MPI_Comm_size(MPI_COMM_WORLD, &nRanks);
-	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  int MPI_threadingModel = -1;
+  if(MPI_COMM_THISJOB == NULL){
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &MPI_threadingModel);
+    int flag = MPI_Comm_dup(MPI_COMM_WORLD, &MPI_COMM_THISJOB);
+    if(flag != MPI_SUCCESS)err_func(&flag);
+  }
+  MPI_Comm_size(MPI_COMM_THISJOB, &nRanks);
+  MPI_Comm_rank(MPI_COMM_THISJOB, &myRank);
 #else
-	nRanks = 1;
-	myRank = 0;
+    nRanks = 1;
+    myRank = 0;
 #endif
 }
 
@@ -684,7 +700,7 @@ void pack_and_send_boundaries(int tid, KS *si, int cb) {
 					//printf("MPI_Irecv: src=%d, dst=%d, dir=%d, fb=%d, size=%lld, buf=%p\n", myRank, neigh_ranks[2*d+fb], d, fb, bufSize[d]*sizeof(fptype), commsBuf[4*d+fb]);
 					t0 = __rdtsc();
 #ifndef ASSUME_MULTINODE
-					MYASSERT(MPI_Irecv((void *)commsBuf[4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_RECV_TAG(fb), MPI_COMM_WORLD, &reqRecvs[2*d+fb]) == MPI_SUCCESS);
+					MYASSERT(MPI_Irecv((void *)commsBuf[4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_RECV_TAG(fb), MPI_COMM_THISJOB, &reqRecvs[2*d+fb]) == MPI_SUCCESS);
 #endif
 					t1 = __rdtsc();
 					t_boundary[3][2*d+fb] += (t1 - t0);
@@ -704,7 +720,7 @@ void pack_and_send_boundaries(int tid, KS *si, int cb) {
 					t1 = __rdtsc();
 					t_boundary[0][2*d+fb] += (t1 - t0);
 #ifndef ASSUME_MULTINODE
-					MYASSERT(MPI_Isend((void *)commsBuf[2+4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_SEND_TAG(fb), MPI_COMM_WORLD, &reqSends[2*d+fb]) == MPI_SUCCESS);
+					MYASSERT(MPI_Isend((void *)commsBuf[2+4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_SEND_TAG(fb), MPI_COMM_THISJOB, &reqSends[2*d+fb]) == MPI_SUCCESS);
 #endif
 					t0 = __rdtsc();
 					t_boundary[2][2*d+fb] += (t0 - t1);
@@ -819,7 +835,7 @@ void pack_and_send_boundaries(int tid, KS *si, int cb) {
 				int tgtid = -1;
 				if(CML_Threadgroup_member(tgRecvs[recvTgNum], tid, &tgtid) == MPI_SUCCESS) {
 					t0 = __rdtsc();
-					MYASSERT(CML_Thread_irecv(tgRecvs[recvTgNum], tid, (void *)commsBuf[4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_RECV_TAG(fb), MPI_COMM_WORLD, &cmlReqRecvs[2*d+fb]) == MPI_SUCCESS);
+					MYASSERT(CML_Thread_irecv(tgRecvs[recvTgNum], tid, (void *)commsBuf[4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_RECV_TAG(fb), MPI_COMM_THISJOB, &cmlReqRecvs[2*d+fb]) == MPI_SUCCESS);
 					t1 = __rdtsc();
 					if(tgtid==0) t_boundary[3][2*d+fb] += (t1 - t0);
 				}
@@ -837,7 +853,7 @@ void pack_and_send_boundaries(int tid, KS *si, int cb) {
 					tt_pack[tgtid][2*d+fb] += (t1 - t0);
 					//gBar->wait(tid);
 					if(tgtid==0) t_boundary[0][2*d+fb] += (t1 - t0);
-					MYASSERT(CML_Thread_isend(tgSends[sendTgNum], tid, CML_NO_AGGREGATE, (void *)commsBuf[2+4*d+fb], (void *)commsBuf[2+4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_SEND_TAG(fb), MPI_COMM_WORLD, &cmlReqSends[2*d+fb]) == MPI_SUCCESS);
+					MYASSERT(CML_Thread_isend(tgSends[sendTgNum], tid, CML_NO_AGGREGATE, (void *)commsBuf[2+4*d+fb], (void *)commsBuf[2+4*d+fb], bufSize[d]*sizeof(fptype), MPI_BYTE, neigh_ranks[2*d+fb], DSLASH_MPI_SEND_TAG(fb), MPI_COMM_THISJOB, &cmlReqSends[2*d+fb]) == MPI_SUCCESS);
 					t0 = __rdtsc();
 					if(tgtid==0) t_boundary[2][2*d+fb] += (t0 - t1);
 					//gBar->wait(tid);
@@ -904,7 +920,7 @@ void recv_and_unpack_boundaries(int tid, KS *so, Gauge18 *u, Gauge *ull, const f
 double mpi_allreduce(double sum) {
 	double globalSum;
 #ifndef ASSUME_MULTINODE
-	MPI_Allreduce(&sum, &globalSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	MPI_Allreduce(&sum, &globalSum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_THISJOB);
 #else
 	globalSum = sum;
 #endif
@@ -916,7 +932,7 @@ void print_boundary_timings(int iters, unsigned long long t_dslash) {
 	for(int k = 0; k < nRanks; k++) {
 		if(!printAllRanks && k > 0) break; 
 #ifndef ASSUME_MULTINODE
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(MPI_COMM_THISJOB);
 #endif
 		if(myRank == k) {
 			unsigned long long total[8] = {0}, gTotal = 0, dtotal;

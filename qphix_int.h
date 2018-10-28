@@ -33,6 +33,7 @@ typedef struct {
   int this_node;                          /* lexicographic node number */
   int sites_on_node;
   int even_sites_on_node;                 /* If needed */
+  void *mpi_comm;                         /* Preinitialize MPI Communicator */
 } QPHIX_layout_t;
 #define QPHIX_LAYOUT_ZERO ((QPHIX_layout_t){NULL,NULL,0,NULL,0,NULL,0,0})
 
