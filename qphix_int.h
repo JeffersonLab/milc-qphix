@@ -35,7 +35,7 @@ typedef struct {
   int even_sites_on_node;                 /* If needed */
   void *mpi_comm;                         /* Preinitialize MPI Communicator */
 } QPHIX_layout_t;
-#define QPHIX_LAYOUT_ZERO ((QPHIX_layout_t){NULL,NULL,0,NULL,0,NULL,0,0})
+#define QPHIX_LAYOUT_ZERO ((QPHIX_layout_t){NULL,NULL,0,NULL,0,NULL,0,0,0,NULL})
 
 typedef struct {
   double final_sec;        /* (out) total number of seconds used */
