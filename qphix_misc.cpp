@@ -16,17 +16,23 @@
 #include "ks_long_dslash.h"
 #include "ks_boundary.h"
 #include "gf_boundary.h"
+#include "ff_boundary.h"
 #include "misc.h"
 
 #include "qphix_internal.h"
 
+/* For single precision these variable will be declared
+ * but referred to as extern for double precison build
+ */
 #if QPHIX_PrecisionInt == 1
 int qphix_sites_on_node;
 int qphix_even_sites_on_node;
+int qphix_fused_sites_on_node;
 //int minCt;
 #else
 extern int qphix_sites_on_node;
 extern int qphix_even_sites_on_node;
+extern int qphix_fused_sites_on_node;
 #endif
 
 extern char * BoundTableF, * BoundTableD;
@@ -402,16 +408,20 @@ static void neigh_lex_coords(int coords[], const int latdim, const int size[], c
 #define QPHIX_init_fptype QPHIX_init_F
 #define setup_comms setup_comms_F
 #define gf_setup_comms gf_setup_comms_F
+#define ff_setup_comms gf_setup_comms_D
 #define QPHIX_finalize_fptype QPHIX_finalize_F
 #define destroy_comms destroy_comms_F
 #define gf_destroy_comms gf_destroy_comms_F
+#define ff_destroy_comms ff_destroy_comms_D
 #elif QPHIX_PrecisionInt==2
 #define QPHIX_init_fptype QPHIX_init_D
 #define setup_comms setup_comms_D
 #define gf_setup_comms gf_setup_comms_D
+#define ff_setup_comms ff_setup_comms_D
 #define QPHIX_finalize_fptype QPHIX_finalize_D
 #define destroy_comms destroy_comms_D
 #define gf_destroy_comms gf_destroy_comms_D
+#define ff_destroy_comms ff_destroy_comms_D
 #else
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
@@ -443,6 +453,7 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
     qphix_even_sites_on_node = layout->even_sites_on_node;
     //printf("qphix_even_sites_on_node = %d\n", qphix_even_sites_on_node);
     qphix_sites_on_node = layout->sites_on_node;
+    //    qphix_fused_sites_on_node = qphix_even_sites_on_node/VECLEN;
 
     int minCt = 1;
     if(getenv("MINCT")) minCt = atoi(getenv("MINCT"));
@@ -489,12 +500,13 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
     int m_coord[4], n_coord[8];
     const int mdim = layout->machdim;
     //lex_coords(m_coord, mdim, geometry, (const size_t)myRank);
-    lex_coords(m_coord, mdim, geometry, myRank);
+    lex_coords(m_coord, mdim, geometry, (const size_t)myRank);
     //neigh_lex_coords(n_coord, (const int)layout->latdim, geometry, (const size_t)myRank, layout->node_number);
-    neigh_lex_coords(n_coord, layout->latdim, geometry, myRank, layout->node_number);
+    neigh_lex_coords(n_coord, (const int)layout->latdim, geometry, (const size_t)myRank, layout->node_number);
 
     setup_comms( m_coord, n_coord );
     gf_setup_comms();
+    ff_setup_comms();
 
                 MYASSERT(Nxh % 2 == 0);
                 MYASSERT(Ny % 4 == 0);
@@ -508,6 +520,7 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
                 Vy = (VECLEN > 2 ? Ny/2 : Ny);
                 Vz = (VECLEN > 4 ? Nz/2 : Nz);
                 Vt = (VECLEN > 8 ? Nt/2 : Nt);
+
                 MYASSERT(Vy % BY == 0);
                 MYASSERT(Vz % BZ == 0);
                 Pxy = (Vxh*Vy+XY_PAD);
@@ -582,6 +595,7 @@ QPHIX_finalize_fptype(void)
   NeighTable = 0x00;
   destroy_comms();
   gf_destroy_comms();
+  ff_destroy_comms();
   BLENGTH = 0;
   PadBound = 0;
   PadNeigh = 0;
