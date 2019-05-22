@@ -1,0 +1,65 @@
+The current implementation of Fermion Force module in QPhiX has scope for
+further optimization. This document lists some of the optimization ideas and
+open issues.
+
+Scope for future optimization of Fermion Force module
+-----------------------------------------------------
+1. The current implementation of primitives (qphix_su3_algebra.cpp) does not
+support multi-process system. It will provide more scalability if MPI based
+primitives are added. Apart from the primitives, shift mechanism (layout.cpp)
+too needs to be made MPI based.
+
+2. Primitives dealing with anti_hermitian matrices presently work on the values
+of the entire matrix. FLOPS can be minimized by considering only the upper half
+of the anti hermitian matrix and the other half can be produced out the upper
+half values.
+
+3. Check the possibility of doing primitives' operations with compressed
+matrices. This will reduce the FLOPS considerably. For reference check the Gauge
+structure in QPhiX where there is a separate dimention to the array to indicate
+if it is compressed or not.
+
+4. Reunit implementation operates on exposed data which is presently not in
+fused format. Keeping these in fused format may improve the performace of reunit
+computation. The feasibilty for this should be examined.
+
+5. The current implementation of shift copies the neighbor's data to a new
+array whenever shift call is made. This causes slowdown of computation loop in
+get_mid and smearing. A better approach to this would be to have shifted arrays
+ready before entering the computation loop. 
+
+
+
+List of open tasks
+------------------
+1. Shift operation on matrix
+Current implementation of matrix shift locates its neighbor using  the same
+logic used for vector shift. The shifted values in case of vector shift match
+with QDP's implementation of vector shift. But in the case of matrix shift,
+shifted values don't match with QDP's shifted values. This issue is blocking the
+result validation after smearing.
+
+2. Shift implementation
+The way shift operations are implemented is that for each site given its index
+and vector offset, corresponding index in MILC layout is found. Based on the
+MILC index, its neighbor's index is calculated and this neighbor's index is
+mapped backward to QPhiX layout's index and vector offset. This process is too
+convoluted. It was done so becuase of ease of locating neighbors in MILC layout.
+However it will not be too hard to do the same thing in QPhiX layout. A native
+layout implementation will save the time of mapping back and forth of indices
+from QPhiX to MILC.
+
+3. Parity aware primitives
+For most of the Fermion Force computation we require primitives to operate on
+both the even and odd sites. For this reason the primitives are not made parity
+aware. They will operate on even and odd sites all the time. Only a few
+primitives have parity field as an argument, which is due to the need from the
+algorithm. Other primitives should also be handling the operation in the same
+way, so that they can be resued in other places apart from Fermion Force as
+well.
+
+4. FLOPS counter
+FLOPS counter mechanism is already present in QPhiX but it is not being used in
+the Fermion Force computation block.
+
+

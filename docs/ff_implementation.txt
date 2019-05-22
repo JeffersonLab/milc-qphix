@@ -1,0 +1,240 @@
+Changes in QPhiX Source for Fermion Force Computation
+-----------------------------------------------------
+QPhiX code has been updated by Tata Consultancy Services Ltd. with Intel
+Corporation. The update provides capabilty to do Fermion Force computation. This
+feature addition has resulted in addition of the following files to the code
+base-
+
+su3.h
+layout.h
+layout.cpp
+qphix_su3_algebra.h
+qphix_su3_algebra.cpp
+fermion_force.h
+fermion_force.cpp
+include/qphix_ff_interface.h
+Makefile_ff
+
+Aside from these new files the following file has been modified-
+qphix_misc.cpp
+
+In this document we give an overview of what changes have been made to the code.
+
+
+qphix_misc.cpp
+--------------
+This is the only file from original code base which has been modified. The only
+change in this file is about declaring a global variable
+qphix_fused_sites_on_node. This variable stores the trip count for vectorized
+operations which will be equal to the number of fused sites present in even or 
+odd list. This variable is used extensively in layout.cpp and 
+qphix_su3_algebra.cpp.
+
+
+su3.h
+-----
+This file has simple and fused version of SU3 data structure. These include
+QPHIX_Complex, SU3_Vector, SU3_Matrix, SU3_AntiHermitMat, QPHIX_ColorMatrix,
+QPHIX_ColorTensor4.
+
+SU3_Vector, SU3_Matrix and SU3_AntiHermitMat are in simple layout while
+QPHIX_ColorMatrix is meant for storing matrix in fused format.
+
+QPHIX_ColorTensor4 structure is to store a 4D tensor in simple format. This can
+be converted to fused format for further optimization. This change will require
+changes in reunit algorithm.
+
+QSU3V & QSU3M are used to store a single instance of fused color vector or color
+matrix. qphix_su3_matrix data type is to store a single instance of color
+matrix.
+
+
+layout.h & layout.cpp
+---------------------
+layout.cpp file contains set of functions which are related to creation,
+deletion, conversion of data structures or doing shift operations.
+
+The following functions are provided for creation or deletion of storage-
+  QPHIX_create_V
+  QPHIX_create_M
+  QPHIX_destroy_M
+
+The following functions are provided for layout conversion-
+  QPHIX_layout_from_su3m
+  QPHIX_layout_to_su3m
+  QPHIX_layout_from_anti_hermitmat
+  QPHIX_layout_to_anti_hermitmat
+
+For shift operation we have the following functions-
+  QPHIX_V_eq_sV
+  QPHIX_M_eq_sM
+
+These functions internally call QPHIX_get_milc_nbr_crd and QPHIX_get_nbr_index.
+The way shift operation is implemented right now is by mapping the index and
+vector offset in qphix layout to equivalent milc index. Using this milc index,
+it then figures out the milc index of its prospective neighbor in the specified
+direction. The neighbor's milc index is mapped back to qphix index and vector
+offset. From this index and offset, data is copied to a new ColorVector or
+ColorMatrix (at source's index and offset) which is in qphix layout.
+
+
+qphix_su3_algebra.h & qphix_su3_algebra.cpp
+-------------------------------------------
+qphix_su3_algebra.cpp contains a set of primitives used for many operations on
+the matrices and the vectors. 
+these functions are of mainly 2 types:
+scalar primitves and vectorised primitives.
+All the primitives are multithreaded.
+
+  QSU3_M_eq_Ma
+  QSU3_M_eq_zero
+  QSU3_M_eq_Ma_times_M
+  QSU3_M_eq_M_times_M
+  QSU3_M_eq_M_times_Ma
+  QSU3_R_eq_re_trace_M
+  QSU3_M_eq_r_times_M 
+  QSU3_M_eq_r_times_M_plus_M
+
+above are the scalar primitives to carry out various mathematical 
+operations on the matrices.
+
+
+  QPHIX_M_eq_zero
+  QPHIX_M_eq_M
+  QPHIX_M_peq_M
+  QPHIX_M_eq_r_times_M
+  QPHIX_M_peq_r_times_M
+  QPHIX_M_peq_M_times_M
+  QPHIX_M_eq_M_times_M
+  QPHIX_M_peq_M_times_Ma
+  QPHIX_M_eq_M_times_Ma
+  QPHIX_M_peq_Ma
+  QPHIX_M_eq_Ma
+  QPHIX_M_eq_Ma_times_M
+  QPHIX_M_eq_r_times_M_plus_M
+  QPHIX_M_eq_antiherm_M
+  QPHIX_M_eqm_M
+  QPHIX_M_eq_V_times_Va
+  QPHIX_M_meq_M
+  QPHIX_M_meq_M_times_M
+  QPHIX_M_eq_Ma_times_Ma
+  QPHIX_expose_M
+
+Above are the vectorised, multithreaded primitves for carrying out various
+mathematical operations on the fused matrices.
+
+qphix_su3_algebra.h also contains various definitions of the low level
+operations handled by the reunit section of FF computation. These macros are
+called by the scalar primitives.
+
+QPHIX_c_eq_r_plus_ir
+QPHIX_c_eq_c_times_c
+QPHIX_c_peq_c
+QPHIX_c_eq_c_minus_c
+QPHIX_c_eq_c_plus_c
+QPHIX_c_peq_r
+QPHIX_c_eq_r
+QPHIX_c_peq_c_times_r
+QPHIX_c_peq_r_times_c
+QPHIX_c_eq_r_plus_ir
+QPHIX_c_eq_ca
+QPHIX_c_eq_r
+QPHIX_c_peq_c_times_c
+QPHIX_c_eq_c
+QPHIX_c_peq_ca_times_c
+QPHIX_c_eq_c_times_r
+QPHIX_c_eq_r_times_c
+QPHIX_c_eq_r_times_c_plus_c
+QPHIX_r_peq_Re_c
+QPHIX_c_eq_r
+QPHIX_c_peq_c_times_ca
+QPHIX_c_eq_c
+
+
+fermion_force.h and fermion_force.cpp
+--------------------------------------
+This is the file which contains the interface call to qphix from milc and the
+entire Fermion Force computation algorithm.
+QPHIX_hisq_force_multi is the interface function called by an external
+application like MILC which handles the FF computation within.
+
+ 
+qphix_ff_interface.h
+--------------------
+This file has been provided to be included by any external application such as
+MILC for utilizing the Fermion Force computation module of QPhiX. It provides
+the required data structures, constants and prototype of the library call.
+
+This file is located under include directory of the base source directory. It
+doesn't get used in the compilation process of QPhiX library.
+
+
+Makefile_ff
+-----------
+A new makefile by the name Makefile_ff has been added to the source base. The
+new features in this makefile are-
+
+1) It builds the QPhiX library including Fermion Force module in addition to
+whatever it used to have in the library built by Makefile_gf.
+
+2) It gives appropriate suffixes to the build output to avoid overwriting of
+the output file if we are building with different configurations. for example-
+  libqphixmilc_avx512_dbg_vt.a
+Here extra suffixes have been added to denote that debug is enabled and its
+linked with vtune library.
+
+3) The output is generated in the directory named lib which is located under
+the base source directory.
+
+4) It provides targets install and uninstall. When we use the target install,
+the relevant library will be copied to an installation directory. This
+directory can be set by editing the Makefile_ff and changing the value of
+PREFIX. Along with the library, the interface header will also be copied. The
+instalation directory will look something like this-
+
+<install dir>
+    include
+       qphix_ff_interface.h
+    lib
+       libqphixmilc_avx512_dbg_vt.a
+       libqphixmilc.a   ->  libqphixmilc_avx512_dbg_vt.a
+
+There will be a symlink by the name libqphixmilc_XXX.a in the lib directory. It
+will point to the latest library built. The suffix XXX will have values as
+expected from MILC (see Makefile_all in MILC source).
+
+This procedure is inspired by the SciDAC build process, where the library name
+does not change no matter what configuration we build it with. Here in QPhiX
+build, we wanted to keep multiple versions of the library with distinct suffix
+while keeping the interface for other application unchanged.
+
+The uninstall target will delete the <install dir> along with whatever it
+contains. Issuing uninstall with any configuration will delete all the variants
+of library present in in the install directory.
+
+The build process can be standardized by making a configure script to set the
+tunable parameters which are currently defined in the Makefile_ff.
+
+To make the QPhiX library with AVX512 support -
+make -f Makefile_ff AVX512=1
+make -f Makefile_ff install
+
+Other tunable parameters can be set within the Makefile_ff. For example-
+
+# Source directory
+BASE_DIR := ${HOME}/QPhiX/Source/milc-qphix
+# Output directory
+LIB_DIR=${BASE_DIR}/lib
+# Installation directory
+PREFIX := ${HOME}/QPhiX/Install/qphix
+# Location of codegen
+CODEGEN_PATH := ${HOME}/QPhiX/Source/milc-qphix-codegen
+# Set architecture (mic/avx/sse/scalar)
+ARCH=mic 
+# Choose to enable debug messages & GDB support (0/1)
+ENABLE_DEBUG=1
+# Choose to use vtune instrumentation (0/1)
+ENABLE_VTUNE=1
+# Choose to use MPI (0/1)
+ENABLE_MPI=1
+
