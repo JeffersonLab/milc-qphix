@@ -44,7 +44,6 @@ YZ_TILING=0       # Enables 4x4xNT tiling of data structures
 
 # Include sampling stuff
 ENABLE_SEP_SAMPLING = 0
-SEPHOME=/home/bjoo/MPSS/sep
 
 ifdef 32C
 NX=32
