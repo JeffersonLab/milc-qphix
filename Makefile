@@ -301,7 +301,7 @@ fermion_force.do: fermion_force.cpp ${HEADERS} $(MAKEFILE) $(CUSTOM_MAKE)
 #	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_su3_algebra.c -o qphix_su3_algebra.fo $(CMLLDFLAGS)
 
 qphix_su3_algebra.do: qphix_su3_algebra.cpp ${HEADERS} $(MAKEFILE) $(CUSTOM_MAKE)
-	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -DMILC_SM -c qphix_su3_algebra.cpp -o qphix_su3_algebra.do  layout.do $(CMLLDFLAGS) 
+	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=2 -DVECLEN=${VECLEND} -DMILC_SM -c qphix_su3_algebra.cpp -o qphix_su3_algebra.do $(CMLLDFLAGS) 
 
 qphix_f3.o: qphix_f3.cpp ${HEADERS} $(MAKEFILE) $(CUSTOM_MAKE)
 	$(CXX) $(CXXFLAGS) $(CMLCXXFLAGS) $(MPSSFLAGS) $(DEFS) -DQPHIX_PrecisionInt=1 -DVECLEN=${VECLENF} -c qphix_f3.cpp -o qphix_f3.o $(CMLLDFLAGS)
