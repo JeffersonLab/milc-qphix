@@ -54,6 +54,91 @@ typedef struct {
 } QPHIX_gauge_coeffs_t;
 #define QPHIX_GAUGE_COEFFS_ZERO ((QPHIX_gauge_coeffs_t){0.,0.,0.,0.})
 
+#define QPHIX_MAX_NAIK 20 /*verify this value */
+typedef struct
+{
+  int n_naiks;
+  double eps_naik[QPHIX_MAX_NAIK];
+  //QPHIX_hisq_unitarize_group_t ugroup;
+  //QPHIX_hisq_unitarize_method_t umethod;
+  int ugroup;
+  int umethod;
+  double fat7_one_link;
+  double fat7_three_staple;
+  double fat7_five_staple;
+  double fat7_seven_staple;
+  double fat7_lepage;
+  double asqtad_one_link;
+  double asqtad_three_staple;
+  double asqtad_five_staple;
+  double asqtad_seven_staple;
+  double asqtad_lepage;
+  double asqtad_naik;
+  double difference_one_link;
+  double difference_naik;
+} QPHIX_hisq_coeffs_t;
+
+// Enumerations
+typedef enum
+{
+  QPHIX_UNITARIZE_U3 = 0,
+  QPHIX_UNITARIZE_SU3 = 1,
+} QPHIX_hisq_unitarize_group_t;
+
+typedef enum
+{
+  QPHIX_UNITARIZE_NONE = 0,
+  QPHIX_UNITARIZE_RATIONAL = 3,
+  QPHIX_UNITARIZE_ANALYTIC = 5,
+} QPHIX_hisq_unitarize_method_t;
+
+#define QPHIX_EPS_NAIK_ZERO {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+#define QPHIX_HISQ_COEFFS_ZERO \
+  ((QPHIX_hisq_coeffs_t){1, QPHIX_EPS_NAIK_ZERO, QPHIX_UNITARIZE_U3, \
+   QPHIX_UNITARIZE_RATIONAL, 0,0,0,0,0, 0,0,0,0,0,0, 0,0})
+
+typedef struct
+{
+  char *tag;
+  double value;
+  void *extra;
+} QPHIX_opt_t;
+
+typedef struct
+{
+  int inited;
+  int want_deps;
+  int want_aux;
+  QPHIX_hisq_unitarize_method_t umethod;
+  int reunit_allow_svd;
+  int reunit_svd_only;
+  double reunit_svd_rel_error;
+  double reunit_svd_abs_error;
+  int svd_values_info;
+  int use_fat7_lepage;
+} QPHIX_hisq_links_t;
+
+typedef struct
+{
+  double one_link;
+  double three_staple;
+  double five_staple;
+  double seven_staple;
+  double lepage;
+  double naik;
+} QPHIX_asqtad_coeffs_t;
+
+typedef struct
+{
+  int inited;
+  int fnmat_src_min;
+  int veclength;
+  double force_filter;
+} QPHIX_hisq_force_t;
+
+extern int qphix_even_sites_on_node;
+extern QPHIX_hisq_links_t QPHIX_hisq_links;
+
   /* these are quantities that apply to all masses in the multi inverter */
 typedef struct {
   QPHIX_evenodd_t parity;

@@ -18,6 +18,7 @@
 #include "ks_long_dslash.h"
 #include "gauge_force_imp.h"
 #include "ks_boundary.h"
+#include "fermion_force.h"
 
 #include "qphix_internal.h"
 #define TIME_CG 1
@@ -72,9 +73,85 @@ const int nGY = (VECLEN < 4 ? 1 : 2);
 const int nGZ = (VECLEN < 8 ? 1 : 2);
 const int nGT = (VECLEN < 16 ? 1 : 2);
 extern int qphix_even_sites_on_node;
+extern int qphix_fused_sites_on_node;
 //extern int sites_on_node;
 
 static hrtimer_t timer = 0;
+
+/* Creation of empty QPHIX_ColorMatrix field */
+QPHIX_D3_ColorMatrix *
+QPHIX_D3_create_M(QPHIX_evenodd_t parity)
+{
+  int p;
+  int pmap[2];
+  
+  pmap[0] = parity & QPHIX_EVEN;
+  pmap[1] = parity & QPHIX_ODD;
+  
+  QPHIX_ColorMatrix *m1 = (QPHIX_ColorMatrix *) malloc(sizeof(QPHIX_ColorMatrix));
+  MYASSERT(m1 != NULL)
+  m1->even = NULL;
+  m1->odd  = NULL;
+  m1->parity = parity;
+  
+//  for(p=0; p<2; p++)
+  for(p=0; p<1; p++)
+  {
+    if (pmap[0])
+    {
+      m1->even = (QSU3M_double *) _mm_malloc(qphix_even_sites_on_node * sizeof(QSU3M_double), VECLENBYTES);
+      MYASSERT(m1->even != NULL);
+    }
+    if (pmap[1])
+    {
+      m1->odd  = (QSU3M_double *) _mm_malloc(qphix_even_sites_on_node * sizeof(QSU3M_double), VECLENBYTES);
+      MYASSERT(m1->odd != NULL);
+    }
+  }
+  return m1;
+}
+
+/* Destruction of QPHIX_ColorMatrix */
+void QPHIX_D3_destroy_M(QPHIX_D3_ColorMatrix *mat)
+{
+  if (mat == NULL) return;
+  if (mat->even != NULL) _mm_free(mat->even);
+  if (mat->odd  != NULL) _mm_free(mat->odd);
+  free(mat);
+}
+
+/* Creation of empty QPHIX_ColorVector field */
+QPHIX_D3_ColorVector *
+QPHIX_D3_create_V(QPHIX_evenodd_t parity)
+{
+    int p;
+    int pmap[2];
+
+    pmap[0] = parity & QPHIX_EVEN;
+    pmap[1] = parity & QPHIX_ODD;
+    
+    QPHIX_D3_ColorVector *v1 = (QPHIX_ColorVector *) malloc(sizeof(QPHIX_ColorVector));
+    MYASSERT(v1 != NULL);
+
+    v1->even = NULL;
+    v1->odd  = NULL;
+    v1->parity = parity;
+    
+    for(p=0; p<2; p++)
+    {
+      if (pmap[0])
+      {
+        v1->even = (QSU3V *) _mm_malloc(qphix_even_sites_on_node * sizeof(QSU3V), VECLENBYTES);
+        MYASSERT(v1->even != NULL);
+      }
+      if (pmap[1])
+      {
+        v1->odd  = (QSU3V *) _mm_malloc(qphix_even_sites_on_node * sizeof(QSU3V), VECLENBYTES);
+        MYASSERT(v1->odd != NULL)
+      }
+    }
+    return v1;
+  }
 
 QPHIX_D3_ColorVector *
 QPHIX_D3_create_V_from_raw( QPHIX_D_Real *src, QPHIX_evenodd_t evenodd )
@@ -1232,23 +1309,21 @@ QPHIX_D3_asqtad_load_L_from_raw( QPHIX_D3_FermionLinksAsqtad *dest, QPHIX_D_Real
 void 
 QPHIX_D3_destroy_V( QPHIX_D3_ColorVector *V )
 {
-    if(V==0x00) return;
-    if(V->even!=0x00) _mm_free(V->even);
-    if(V->odd!=0x00) _mm_free(V->odd);
-    free(V);
-    V=0x00;
+  if(V==0x00) return;
+  if(V->even!=0x00) _mm_free(V->even);
+  if(V->odd!=0x00) _mm_free(V->odd);
+  free(V);
 }
 
 void 
 QPHIX_D3_asqtad_destroy_L( QPHIX_D3_FermionLinksAsqtad *L )
 {
-    if(L==0x00) return;
-    if(L->lngeven!=0x00) _mm_free(L->lngeven);
-    if(L->lngodd!=0x00) _mm_free(L->lngodd);
-    if(L->fateven!=0x00) _mm_free(L->fateven);
-    if(L->fatodd!=0x00) _mm_free(L->fatodd);
-    free(L);
-    L=0x00;
+  if(L==0x00) return;
+  if(L->lngeven!=0x00) _mm_free(L->lngeven);
+  if(L->lngodd!=0x00) _mm_free(L->lngodd);
+  if(L->fateven!=0x00) _mm_free(L->fateven);
+  if(L->fatodd!=0x00) _mm_free(L->fatodd);
+  free(L);
 }
 
 void QPHIX_D3_destroy_G(QPHIX_D3_GaugeField *field)
@@ -1256,7 +1331,6 @@ void QPHIX_D3_destroy_G(QPHIX_D3_GaugeField *field)
     if(field==0x00) return;
     if(field->geo!=0x00) _mm_free(field->geo);
     free(field);
-    field=0x00;
 }
 
 void QPHIX_D3_destroy_F(QPHIX_D3_Force *field)
@@ -1280,5 +1354,535 @@ QPHIX_D3_asqtad_dslash( QPHIX_D3_FermionLinksAsqtad *asqtad,
         qphix_ks_dslash( (void *)in->odd, asqtad->lngeven, asqtad->fateven, (void *)out->even, 0 );
     else
 	qphix_ks_dslash( (void *)in->even, asqtad->lngodd, asqtad->fatodd, (void *)out->odd, 1 );
+}
+
+/* Convertion between SU3_Matrix & QPHIX_ColorMatrix */
+void QPHIX_D3_layout_from_su3m(QPHIX_D3_ColorMatrix *dest, SU3_D_Matrix *src)
+{
+  int x, y, z, t;
+  int x1, y1, z1, t1;
+  int x2, y2, z2, t2;
+  int ind, v;
+  int i, c1, c2;
+
+  QSU3M_double *dest_e = (QSU3M_double *)dest->even;
+  QSU3M_double *dest_o = (QSU3M_double *)dest->odd;
+
+#pragma omp parallel for private(x, y, z, t, x1, y1, z1, t1, x2, y2, z2, t2, ind, v)
+  for(i = 0; i < qphix_even_sites_on_node; ++i)
+  {
+    y = i / Nxh;
+    x = i - y * Nxh;
+    z = y / Ny;
+    y = y - z * Ny;
+    t = z / Nz;
+    z = z - t * Nz;
+
+    x1 = x / Vxh;
+    x2 = x % Vxh;
+    y1 = y / Vy;
+    y2 = y % Vy;
+    z1 = z / Vz;
+    z2 = z % Vz;
+    t1 = t / Vt;
+    t2 = t % Vt;
+
+    ind = t2 * Pxyz + z2 * Pxy + y2 * Vxh + x2;
+    v = ((t1 * nGZ + z1) * nGY + y1) * nGX + x1;
+
+    for(c1 = 0; c1 < 3; ++c1)
+    {
+      for(c2 = 0; c2 < 3; ++c2)
+      {
+        dest_e[ind][c1][c2][0][v] = src[i].e[c1][c2].real;
+        dest_e[ind][c1][c2][1][v] = src[i].e[c1][c2].imag;
+        dest_o[ind][c1][c2][0][v] = src[i + qphix_even_sites_on_node].e[c1][c2].real;
+        dest_o[ind][c1][c2][1][v] = src[i + qphix_even_sites_on_node].e[c1][c2].imag;
+      }
+    }
+  }
+}
+
+void QPHIX_D3_layout_from_4su3m(QPHIX_D3_ColorMatrix *dest[], SU3_D_Matrix *src)
+{
+  int x, y, z, t;
+  int x1, y1, z1, t1;
+  int x2, y2, z2, t2;
+  int ind, v;
+  int i, c1, c2;
+
+  QSU3M_double *dest_e[4];
+  QSU3M_double *dest_o[4];
+  
+  for(int dir = 0; dir < 4; dir++){
+    dest_e[dir] = (QSU3M_double *)dest[dir]->even;
+    dest_o[dir] = (QSU3M_double *)dest[dir]->odd;
+  }
+
+#pragma omp parallel for private(x, y, z, t, x1, y1, z1, t1, x2, y2, z2, t2, ind, v)
+  for(i = 0; i < qphix_even_sites_on_node; ++i)
+  {
+    y = i / Nxh;
+    x = i - y * Nxh;
+    z = y / Ny;
+    y = y - z * Ny;
+    t = z / Nz;
+    z = z - t * Nz;
+
+    x1 = x / Vxh;
+    x2 = x % Vxh;
+    y1 = y / Vy;
+    y2 = y % Vy;
+    z1 = z / Vz;
+    z2 = z % Vz;
+    t1 = t / Vt;
+    t2 = t % Vt;
+
+    ind = t2 * Pxyz + z2 * Pxy + y2 * Vxh + x2;
+    v = ((t1 * nGZ + z1) * nGY + y1) * nGX + x1;
+
+    for(c1 = 0; c1 < 3; ++c1)
+    {
+      for(c2 = 0; c2 < 3; ++c2)
+      {
+	for(int dir = 0; dir < 4; dir++){
+	  dest_e[dir][ind][c1][c2][0][v] = src[4*i+dir].e[c1][c2].real;
+	  dest_e[dir][ind][c1][c2][1][v] = src[4*i+dir].e[c1][c2].imag;
+	  dest_o[dir][ind][c1][c2][0][v] =
+	     src[4*(i + qphix_even_sites_on_node) + dir].e[c1][c2].real;
+	  dest_o[dir][ind][c1][c2][1][v] =
+	     src[4*(i + qphix_even_sites_on_node) + dir].e[c1][c2].imag;
+	}
+      }
+    }
+  }
+}
+
+void QPHIX_D3_layout_to_su3m(SU3_D_Matrix *dest, QPHIX_D3_ColorMatrix *src)
+{
+  int x, y, z, t;
+  int x1, y1, z1, t1;
+  int x2, y2, z2, t2;
+  int ind, v;
+  int i, c1, c2;
+  
+  QSU3M_double *qme = (QSU3M_double *)src->even;
+  QSU3M_double *qmo = (QSU3M_double *)src->odd;
+  
+#pragma omp parallel for private(x, y, z, t, x1, y1, z1, t1, x2, y2, z2, t2, ind, v)
+  for(i = 0; i < qphix_even_sites_on_node; i++)
+  {
+    y = i / Nxh;
+    x = i - y * Nxh;
+    z = y / Ny;
+    y = y - z * Ny;
+    t = z / Nz;
+    z = z - t * Nz;
+  
+    x1 = x / Vxh;
+    x2 = x % Vxh;
+    y1 = y / Vy;
+    y2 = y % Vy;
+    z1 = z / Vz;
+    z2 = z % Vz;
+    t1 = t / Vt;
+    t2 = t % Vt;
+  
+    ind = t2 * Pxyz + z2 * Pxy + y2 * Vxh + x2;
+    v = ((t1 * nGZ + z1) * nGY + y1) * nGX + x1;
+  
+    for(c1 = 0; c1 < 3; ++c1)
+    {
+      for(c2 = 0; c2 < 3; ++c2)
+      {
+        dest[i].e[c1][c2].real = qme[ind][c1][c2][0][v];
+        dest[i].e[c1][c2].imag = qme[ind][c1][c2][1][v];
+        dest[i + qphix_even_sites_on_node].e[c1][c2].real = qmo[ind][c1][c2][0][v];
+        dest[i + qphix_even_sites_on_node].e[c1][c2].imag = qmo[ind][c1][c2][1][v];
+      }
+    }
+  }
+}
+
+void QPHIX_D3_layout_to_4su3m(SU3_D_Matrix *dest, QPHIX_D3_ColorMatrix *src[])
+{
+  int x, y, z, t;
+  int x1, y1, z1, t1;
+  int x2, y2, z2, t2;
+  int ind, v;
+  int i, c1, c2;
+  
+  QSU3M_double *qme[4];
+  QSU3M_double *qmo[4];
+  
+  for(int dir = 0; dir < 4; dir++){
+    qme[dir] = (QSU3M_double *)src[dir]->even;
+    qmo[dir] = (QSU3M_double *)src[dir]->odd;
+  }
+
+#pragma omp parallel for private(x, y, z, t, x1, y1, z1, t1, x2, y2, z2, t2, ind, v)
+  for(i = 0; i < qphix_even_sites_on_node; i++)
+  {
+    y = i / Nxh;
+    x = i - y * Nxh;
+    z = y / Ny;
+    y = y - z * Ny;
+    t = z / Nz;
+    z = z - t * Nz;
+  
+    x1 = x / Vxh;
+    x2 = x % Vxh;
+    y1 = y / Vy;
+    y2 = y % Vy;
+    z1 = z / Vz;
+    z2 = z % Vz;
+    t1 = t / Vt;
+    t2 = t % Vt;
+  
+    ind = t2 * Pxyz + z2 * Pxy + y2 * Vxh + x2;
+    v = ((t1 * nGZ + z1) * nGY + y1) * nGX + x1;
+  
+    for(c1 = 0; c1 < 3; ++c1)
+    {
+      for(c2 = 0; c2 < 3; ++c2)
+      {
+	for(int dir = 0; dir < 4; dir++){
+	  dest[4*i + dir].e[c1][c2].real = qme[dir][ind][c1][c2][0][v];
+	  dest[4*i + dir].e[c1][c2].imag = qme[dir][ind][c1][c2][1][v];
+	  dest[4*(i + qphix_even_sites_on_node) + dir].e[c1][c2].real =
+	    qmo[dir][ind][c1][c2][0][v];
+	  dest[4*(i + qphix_even_sites_on_node) + dir].e[c1][c2].imag =
+	    qmo[dir][ind][c1][c2][1][v];
+	}
+      }
+    }
+  }
+}
+
+/* Creation of HISQ fermion links */
+QPHIX_D3_FermionLinksHisq *
+QPHIX_D3_hisq_create_L_from_4su3m(void *U_links, void *V_links, void *W_unitlinks, void *Y_unitlinks,
+				  QPHIX_evenodd_t parity)
+{
+  QPHIX_D3_FermionLinksHisq *qphix_links = 
+    (QPHIX_D3_FermionLinksHisq *)malloc(sizeof(QPHIX_D3_FermionLinksHisq));
+  MYASSERT( qphix_links != NULL );
+
+  for(int i=0; i<4; i++) {
+    qphix_links->U_links[i] = QPHIX_D3_create_M(parity);
+    qphix_links->V_links[i] = QPHIX_D3_create_M(parity);
+    qphix_links->W_unitlinks[i] = QPHIX_D3_create_M(parity);
+    qphix_links->Y_unitlinks[i] = QPHIX_D3_create_M(parity);
+  }
+
+  QPHIX_D3_layout_from_4su3m(qphix_links->U_links, (SU3_D_Matrix*)U_links);
+  QPHIX_D3_layout_from_4su3m(qphix_links->V_links, (SU3_D_Matrix*)V_links);
+  QPHIX_D3_layout_from_4su3m(qphix_links->W_unitlinks, (SU3_D_Matrix*)W_unitlinks);
+  QPHIX_D3_layout_from_4su3m(qphix_links->Y_unitlinks, (SU3_D_Matrix*)Y_unitlinks);
+
+  return qphix_links;
+}
+
+
+static void
+destroy_4M(QPHIX_D3_ColorMatrix **M){
+  if(M == NULL)return;
+  for(int dir = 0; dir < 4; dir++)
+    if(M[dir] != NULL)QPHIX_D3_destroy_M( M[dir] );
+}
+
+void 
+QPHIX_D3_hisq_destroy_L( QPHIX_D3_FermionLinksHisq *L )
+{
+    if(L==0x00) return;
+    if(L->U_links!=0x00)destroy_4M(L->U_links);
+    if(L->V_links!=0x00)destroy_4M(L->V_links);
+    if(L->W_unitlinks!=0x00)destroy_4M(L->W_unitlinks);
+    if(L->Y_unitlinks!=0x00)destroy_4M(L->Y_unitlinks);
+    free(L);
+}
+
+/* Convert SU3_AntiHermitMat to QPHIX_ColorMatrix */
+//void QPHIX_D3_layout_from_anti_hermitmat(QPHIX_D3_ColorMatrix *dest[], void *ptr, int SZ)
+QPHIX_D3_ColorMatrix **
+QPHIX_D3_create_F_from_anti_hermitmat( void *ptr, int SZ )
+{
+  int x, y, z, t;
+  int x1, y1, z1, t1;
+  int x2, y2, z2, t2;
+  int ind, v;
+  int i, c1, c2;
+
+  QPHIX_D3_ColorMatrix **dest = 
+    (QPHIX_D3_ColorMatrix **)malloc(sizeof(QPHIX_D3_ColorMatrix *)*4);
+  MYASSERT( dest != NULL );
+
+  for(int dir = 0; dir < 4; dir++){
+    dest[dir] = QPHIX_D3_create_M(QPHIX_EVENODD);
+    MYASSERT( dest[dir] != NULL );
+  }
+  
+  QSU3M_double *dest_e[4];
+  QSU3M_double *dest_o[4];
+  
+  for(int dir = 0; dir < 4; dir++){
+    dest_e[dir] = (QSU3M_double *)dest[dir]->even;
+    dest_o[dir] = (QSU3M_double *)dest[dir]->odd;
+  }
+  
+#pragma omp parallel for private(x, y, z, t, x1, y1, z1, t1, x2, y2, z2, t2, ind, v)
+  for(i = 0; i < qphix_even_sites_on_node; i++)
+  {
+    y = i / Nxh;
+    x = i - y * Nxh;
+    z = y / Ny;
+    y = y - z * Ny;
+    t = z / Nz;
+    z = z - t * Nz;
+    
+    x1 = x / Vxh;
+    x2 = x % Vxh;
+    y1 = y / Vy;
+    y2 = y % Vy;
+    z1 = z / Vz;
+    z2 = z % Vz;
+    t1 = t / Vt;
+    t2 = t % Vt;
+    
+    ind = t2 * Pxyz + z2 * Pxy + y2 * Vxh + x2;
+    v = ((t1 * nGZ + z1) * nGY + y1) * nGX + x1;
+    SU3_D_AntiHermitMat *ahe = (SU3_D_AntiHermitMat*)(ptr +  i*SZ);
+    SU3_D_AntiHermitMat *aho = (SU3_D_AntiHermitMat*)(ptr + (i + qphix_even_sites_on_node)*SZ);
+    
+   for(int dir = 0; dir < 4; dir++){
+    dest_e[dir][ind][0][0][0][v] =  0.0;
+    dest_e[dir][ind][0][0][1][v] =  ahe[dir].m00im;
+    dest_e[dir][ind][1][1][0][v] =  0.0;
+    dest_e[dir][ind][1][1][1][v] =  ahe[dir].m11im;
+    dest_e[dir][ind][2][2][0][v] =  0.0;
+    dest_e[dir][ind][2][2][1][v] =  ahe[dir].m22im;
+    
+    dest_e[dir][ind][0][1][0][v] =  ahe[dir].m01.real;
+    dest_e[dir][ind][0][1][1][v] =  ahe[dir].m01.imag;
+    dest_e[dir][ind][1][0][0][v] = -ahe[dir].m01.real;
+    dest_e[dir][ind][1][0][1][v] =  ahe[dir].m01.imag;
+    dest_e[dir][ind][0][2][0][v] =  ahe[dir].m02.real;
+    dest_e[dir][ind][0][2][1][v] =  ahe[dir].m02.imag;
+    dest_e[dir][ind][2][0][0][v] = -ahe[dir].m02.real;
+    dest_e[dir][ind][2][0][1][v] =  ahe[dir].m02.imag;
+    dest_e[dir][ind][1][2][0][v] =  ahe[dir].m12.real;
+    dest_e[dir][ind][1][2][1][v] =  ahe[dir].m12.imag;
+    dest_e[dir][ind][2][1][0][v] = -ahe[dir].m12.real;
+    dest_e[dir][ind][2][1][1][v] =  ahe[dir].m12.imag;
+    
+    dest_o[dir][ind][0][0][0][v] =  0.0;
+    dest_o[dir][ind][0][0][1][v] =  aho[dir].m00im;
+    dest_o[dir][ind][1][1][0][v] =  0.0;
+    dest_o[dir][ind][1][1][1][v] =  aho[dir].m11im;
+    dest_o[dir][ind][2][2][0][v] =  0.0;
+    dest_o[dir][ind][2][2][1][v] =  aho[dir].m22im;
+    
+    dest_o[dir][ind][0][1][0][v] =  aho[dir].m01.real;
+    dest_o[dir][ind][0][1][1][v] =  aho[dir].m01.imag;
+    dest_o[dir][ind][1][0][0][v] = -aho[dir].m01.real;
+    dest_o[dir][ind][1][0][1][v] =  aho[dir].m01.imag;
+    dest_o[dir][ind][0][2][0][v] =  aho[dir].m02.real;
+    dest_o[dir][ind][0][2][1][v] =  aho[dir].m02.imag;
+    dest_o[dir][ind][2][0][0][v] = -aho[dir].m02.real;
+    dest_o[dir][ind][2][0][1][v] =  aho[dir].m02.imag;
+    dest_o[dir][ind][1][2][0][v] =  aho[dir].m12.real;
+    dest_o[dir][ind][1][2][1][v] =  aho[dir].m12.imag;
+    dest_o[dir][ind][2][1][0][v] = -aho[dir].m12.real;
+    dest_o[dir][ind][2][1][1][v] =  aho[dir].m12.imag;
+   }
+  }
+  return dest;
+}
+
+/* Convert QPHIX_ColorMatrix to SU3_AntiHermitMat */
+void QPHIX_D3_layout_to_anti_hermitmat(void *ptr, QPHIX_D3_ColorMatrix *src[], int SZ)
+{
+  int x, y, z, t;
+  int x1, y1, z1, t1;
+  int x2, y2, z2, t2;
+  int ind, v;
+  int i, c1, c2;
+  
+  QSU3M_double *src_e[4];
+  QSU3M_double *src_o[4];
+  
+  for(int dir = 0; dir < 4; dir++){
+    src_e[dir] = (QSU3M_double *)src[dir]->even;
+    src_o[dir] = (QSU3M_double *)src[dir]->odd;
+  }
+  
+#pragma omp parallel for private(x, y, z, t, x1, y1, z1, t1, x2, y2, z2, t2, ind, v)
+  for(i = 0; i < qphix_even_sites_on_node; ++i)
+  {
+    y = i / Nxh;
+    x = i - y * Nxh;
+    z = y / Ny;
+    y = y - z * Ny;
+    t = z / Nz;
+    z = z - t * Nz;
+    
+    x1 = x / Vxh;
+    x2 = x % Vxh;
+    y1 = y / Vy;
+    y2 = y % Vy;
+    z1 = z / Vz;
+    z2 = z % Vz;
+    t1 = t / Vt;
+    t2 = t % Vt;
+    
+    ind = t2 * Pxyz + z2 * Pxy + y2 * Vxh + x2;
+    v = ((t1 * nGZ + z1) * nGY + y1) * nGX + x1;
+    
+    SU3_D_AntiHermitMat *ahe = (SU3_D_AntiHermitMat*)(ptr +  i*SZ);
+    SU3_D_AntiHermitMat *aho = (SU3_D_AntiHermitMat*)(ptr + (i + qphix_even_sites_on_node)*SZ);
+    
+   for(int dir = 0; dir < 4; dir++){
+    ahe[dir].m00im    = src_e[dir][ind][0][0][1][v];
+    ahe[dir].m11im    = src_e[dir][ind][1][1][1][v];
+    ahe[dir].m22im    = src_e[dir][ind][2][2][1][v];
+    ahe[dir].m01.imag = src_e[dir][ind][0][1][1][v];
+    ahe[dir].m01.real = src_e[dir][ind][0][1][0][v];
+    ahe[dir].m02.imag = src_e[dir][ind][0][2][1][v];
+    ahe[dir].m02.real = src_e[dir][ind][0][2][0][v];
+    ahe[dir].m12.imag = src_e[dir][ind][1][2][1][v];
+    ahe[dir].m12.real = src_e[dir][ind][1][2][0][v];
+    
+    aho[dir].m00im    = src_o[dir][ind][0][0][1][v];
+    aho[dir].m11im    = src_o[dir][ind][1][1][1][v];
+    aho[dir].m22im    = src_o[dir][ind][2][2][1][v];
+    aho[dir].m01.imag = src_o[dir][ind][0][1][1][v];
+    aho[dir].m01.real = src_o[dir][ind][0][1][0][v];
+    aho[dir].m02.imag = src_o[dir][ind][0][2][1][v];
+    aho[dir].m02.real = src_o[dir][ind][0][2][0][v];
+    aho[dir].m12.imag = src_o[dir][ind][1][2][1][v];
+    aho[dir].m12.real = src_o[dir][ind][1][2][0][v];
+   }
+  }
+}
+
+void QPHIX_D3_reset_M(QPHIX_D3_ColorMatrix *M2, qphix_su3_matrix* M1)
+{
+  QSU3M_double *m2e, *m2o;
+  int i, v, ind;
+  m2e = (QSU3M_double *)M2->even;
+  m2o = (QSU3M_double *)M2->odd;
+
+#pragma omp parallel for private(v, ind)
+  for(i=0; i<qphix_fused_sites_on_node; i++)
+  {
+    for(v=0; v<VECLEN; v++)
+    {
+      ind = (i * VECLEN * 2) + (v * 2);
+
+      m2e[i][0][0][0][v] = M1[ind][0][0].real;
+      m2e[i][0][0][1][v] = M1[ind][0][0].imag;
+      m2e[i][0][1][0][v] = M1[ind][0][1].real;
+      m2e[i][0][1][1][v] = M1[ind][0][1].imag;
+      m2e[i][0][2][0][v] = M1[ind][0][2].real;
+      m2e[i][0][2][1][v] = M1[ind][0][2].imag;
+      m2e[i][1][0][0][v] = M1[ind][1][0].real;
+      m2e[i][1][0][1][v] = M1[ind][1][0].imag;
+      m2e[i][1][1][0][v] = M1[ind][1][1].real;
+      m2e[i][1][1][1][v] = M1[ind][1][1].imag;
+      m2e[i][1][2][0][v] = M1[ind][1][2].real;
+      m2e[i][1][2][1][v] = M1[ind][1][2].imag;
+      m2e[i][2][0][0][v] = M1[ind][2][0].real;
+      m2e[i][2][0][1][v] = M1[ind][2][0].imag;
+      m2e[i][2][1][0][v] = M1[ind][2][1].real;
+      m2e[i][2][1][1][v] = M1[ind][2][1].imag;
+      m2e[i][2][2][0][v] = M1[ind][2][2].real;
+      m2e[i][2][2][1][v] = M1[ind][2][2].imag;
+
+      ind++;
+
+      m2o[i][0][0][0][v] = M1[ind][0][0].real;
+      m2o[i][0][0][1][v] = M1[ind][0][0].imag;
+      m2o[i][0][1][0][v] = M1[ind][0][1].real;
+      m2o[i][0][1][1][v] = M1[ind][0][1].imag;
+      m2o[i][0][2][0][v] = M1[ind][0][2].real;
+      m2o[i][0][2][1][v] = M1[ind][0][2].imag;
+      m2o[i][1][0][0][v] = M1[ind][1][0].real;
+      m2o[i][1][0][1][v] = M1[ind][1][0].imag;
+      m2o[i][1][1][0][v] = M1[ind][1][1].real;
+      m2o[i][1][1][1][v] = M1[ind][1][1].imag;
+      m2o[i][1][2][0][v] = M1[ind][1][2].real;
+      m2o[i][1][2][1][v] = M1[ind][1][2].imag;
+      m2o[i][2][0][0][v] = M1[ind][2][0].real;
+      m2o[i][2][0][1][v] = M1[ind][2][0].imag;
+      m2o[i][2][1][0][v] = M1[ind][2][1].real;
+      m2o[i][2][1][1][v] = M1[ind][2][1].imag;
+      m2o[i][2][2][0][v] = M1[ind][2][2].real;
+      m2o[i][2][2][1][v] = M1[ind][2][2].imag;
+    }
+  }
+}
+
+//Expose an array of su3 matrix from QPHIX_ColorMatrix
+qphix_su3_matrix* QPHIX_D3_expose_M(QPHIX_D3_ColorMatrix* M1)
+{
+  qphix_su3_matrix *M2;
+  QSU3M_double *m1e, *m1o;
+  int i, v, ind;
+  m1e = (QSU3M_double *)M1->even;
+  m1o = (QSU3M_double *)M1->odd;
+
+  //malloc for M2
+  M2 = (qphix_su3_matrix *) _mm_malloc(sizeof(qphix_su3_matrix) * qphix_even_sites_on_node * 2, VECLENBYTES);
+
+#pragma omp parallel for private(v, ind)
+  for(i=0; i<qphix_fused_sites_on_node; i++)
+  {
+    for(v=0; v<VECLEN; v++)
+    {
+      ind = (i * VECLEN * 2) + (v * 2);
+
+      M2[ind][0][0].real = m1e[i][0][0][0][v];
+      M2[ind][0][0].imag = m1e[i][0][0][1][v];
+      M2[ind][0][1].real = m1e[i][0][1][0][v];
+      M2[ind][0][1].imag = m1e[i][0][1][1][v];
+      M2[ind][0][2].real = m1e[i][0][2][0][v];
+      M2[ind][0][2].imag = m1e[i][0][2][1][v];
+      M2[ind][1][0].real = m1e[i][1][0][0][v];
+      M2[ind][1][0].imag = m1e[i][1][0][1][v];
+      M2[ind][1][1].real = m1e[i][1][1][0][v];
+      M2[ind][1][1].imag = m1e[i][1][1][1][v];
+      M2[ind][1][2].real = m1e[i][1][2][0][v];
+      M2[ind][1][2].imag = m1e[i][1][2][1][v];
+      M2[ind][2][0].real = m1e[i][2][0][0][v];
+      M2[ind][2][0].imag = m1e[i][2][0][1][v];
+      M2[ind][2][1].real = m1e[i][2][1][0][v];
+      M2[ind][2][1].imag = m1e[i][2][1][1][v];
+      M2[ind][2][2].real = m1e[i][2][2][0][v];
+      M2[ind][2][2].imag = m1e[i][2][2][1][v];
+
+      ind++;
+
+      M2[ind][0][0].real = m1o[i][0][0][0][v];
+      M2[ind][0][0].imag = m1o[i][0][0][1][v];
+      M2[ind][0][1].real = m1o[i][0][1][0][v];
+      M2[ind][0][1].imag = m1o[i][0][1][1][v];
+      M2[ind][0][2].real = m1o[i][0][2][0][v];
+      M2[ind][0][2].imag = m1o[i][0][2][1][v];
+      M2[ind][1][0].real = m1o[i][1][0][0][v];
+      M2[ind][1][0].imag = m1o[i][1][0][1][v];
+      M2[ind][1][1].real = m1o[i][1][1][0][v];
+      M2[ind][1][1].imag = m1o[i][1][1][1][v];
+      M2[ind][1][2].real = m1o[i][1][2][0][v];
+      M2[ind][1][2].imag = m1o[i][1][2][1][v];
+      M2[ind][2][0].real = m1o[i][2][0][0][v];
+      M2[ind][2][0].imag = m1o[i][2][0][1][v];
+      M2[ind][2][1].real = m1o[i][2][1][0][v];
+      M2[ind][2][1].imag = m1o[i][2][1][1][v];
+      M2[ind][2][2].real = m1o[i][2][2][0][v];
+      M2[ind][2][2].imag = m1o[i][2][2][1][v];
+    }
+  }
+
+  return M2;
 }
 

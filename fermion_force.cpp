@@ -6,6 +6,7 @@
 #include "fermion_force.h"
 #include "ks_globals.h"
 #include "layout.h"
+#include "qphix.h"
 #include "qphix_su3_algebra.h"
 
 #define set_temps() if(!setcount++) set_temps0()
@@ -73,18 +74,18 @@ static double QPHIX_time(void)
 
 static void set_temps0(void)
 {
-  for(int i=0; i<NMTMP; i++) QPHIX_create_M(&mtmp[i], QPHIX_EVENODD);
+  for(int i=0; i<NMTMP; i++) mtmp[i] = QPHIX_create_M(QPHIX_EVENODD);
 
   for(int i=0; i<NFTMP; i++)
   {
-    QPHIX_create_M(&ftmp0[i], QPHIX_EVENODD);
-    for(int j=0; j<4; j++) QPHIX_create_M(&ftmp[i][j], QPHIX_EVENODD);
+    ftmp0[i] = QPHIX_create_M(QPHIX_EVENODD);
+    for(int j=0; j<4; j++) ftmp[i][j] = QPHIX_create_M(QPHIX_EVENODD);
   }
 
   for(int i=0; i<NBTMP; i++)
   {
-    QPHIX_create_M(&btmp0[i], QPHIX_EVENODD);
-    for(int j=0; j<4; j++) QPHIX_create_M(&btmp[i][j], QPHIX_EVENODD);
+    btmp0[i] = QPHIX_create_M(QPHIX_EVENODD);
+    for(int j=0; j<4; j++) btmp[i][j] = QPHIX_create_M(QPHIX_EVENODD);
   }
 }
 
@@ -117,13 +118,13 @@ void QPHIX_hisq_force_multi(QPHIX_info_t *info, QPHIX_FermionLinksHisq *flh,
   
   for(int mu=0; mu<4; mu++)
   {
-    QPHIX_create_M(&deriv[mu], QPHIX_EVENODD);
+    deriv[mu] = QPHIX_create_M(QPHIX_EVENODD);
     QPHIX_M_eq_zero(deriv[mu]);
   }
   
   QPHIX_hisq_deriv_multi(info, flh, deriv, hisq_coeff, residues, x, n_orders_naik);
   
-  QPHIX_create_M(&mtmp, QPHIX_EVENODD);
+  mtmp = QPHIX_create_M(QPHIX_EVENODD);
   
   for(int dir=0; dir<4; dir++)
   {
@@ -173,15 +174,15 @@ void QPHIX_hisq_deriv_multi(QPHIX_info_t *info, QPHIX_FermionLinksHisq *flh,
     Wgf[i] = flh->W_unitlinks[i];
   }
   
-  QPHIX_create_M(&tmat, QPHIX_EVENODD);
+  tmat = QPHIX_create_M(QPHIX_EVENODD);
   for(int i=0; i<4; i++)
   {
-    QPHIX_create_M(&force_accum_0[i], QPHIX_EVENODD);
-    QPHIX_create_M(&force_accum_0_naik[i], QPHIX_EVENODD);
-    QPHIX_create_M(&force_accum_1[i], QPHIX_EVENODD);
-    QPHIX_create_M(&force_accum_1u[i], QPHIX_EVENODD);
-    QPHIX_create_M(&force_accum_2[i], QPHIX_EVENODD);
-    QPHIX_create_M(&force_final[i], QPHIX_EVENODD);
+    force_accum_0[i] = QPHIX_create_M(QPHIX_EVENODD);
+    force_accum_0_naik[i] = QPHIX_create_M(QPHIX_EVENODD);
+    force_accum_1[i] = QPHIX_create_M(QPHIX_EVENODD);
+    force_accum_1u[i] = QPHIX_create_M(QPHIX_EVENODD);
+    force_accum_2[i] = QPHIX_create_M(QPHIX_EVENODD);
+    force_final[i] = QPHIX_create_M(QPHIX_EVENODD);
     QPHIX_M_eq_zero(force_accum_2[i]);
   }
   
@@ -351,9 +352,9 @@ info->status = QPHIX_SUCCESS;
     QPHIX_ColorVector *shiftx[2];
     QPHIX_ColorMatrix *temp;
 
-    QPHIX_create_V(&shiftx[0], QPHIX_EVENODD);
-    QPHIX_create_V(&shiftx[1], QPHIX_EVENODD);
-    QPHIX_create_M(&temp, QPHIX_EVENODD);
+    shiftx[0] = QPHIX_create_V(QPHIX_EVENODD);
+    shiftx[1] = QPHIX_create_V(QPHIX_EVENODD);
+    temp = QPHIX_create_M(QPHIX_EVENODD);
 
     //Algo using only primitives
 
@@ -509,12 +510,12 @@ QPHIX_fat_deriv(QPHIX_info_t *info, QPHIX_ColorMatrix *gauge[],
   if(have3) {
     if(have5) {
       for(int mu=0; mu<4; mu++) {
-        QPHIX_create_M(&stpl3[mu], QPHIX_EVENODD);
-        QPHIX_create_M(&mid5[mu], QPHIX_EVENODD);
+        stpl3[mu] = QPHIX_create_M(QPHIX_EVENODD);
+        mid5[mu] = QPHIX_create_M(QPHIX_EVENODD);
       }
     }
-    QPHIX_create_M(&stpl5, QPHIX_EVENODD);
-    QPHIX_create_M(&mid3, QPHIX_EVENODD);
+    stpl5 = QPHIX_create_M(QPHIX_EVENODD);
+    mid3 = QPHIX_create_M(QPHIX_EVENODD);
     set_temps();
   }
 
@@ -1066,7 +1067,7 @@ void u3_un_der_analytic(QPHIX_info_t *info, qphix_su3_matrix *V,
 
   nflops += 16+33+38+22+37+22+12;
 
-  /* ** create several building blocks for derivative ** */
+  /* **create several building blocks for derivative ** */
   QSU3_M_eq_M_times_M(&VQ, V, &Q);
   QSU3_M_eq_M_times_Ma(&QVd, &Q, V);
   QSU3_M_eq_M_times_Ma(&VVd, V, V);

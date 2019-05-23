@@ -23,7 +23,7 @@ void QSU3_M_eq_r_times_M ( qphix_su3_matrix *restrict r, QPHIX_Real *restrict a,
 void QSU3_M_eq_r_times_M_plus_M ( qphix_su3_matrix *restrict r, QPHIX_Real *restrict a, qphix_su3_matrix *restrict b, qphix_su3_matrix *restrict c);
 
 
-// Vectorized, multi-threaded, single processor version of SU3 alrebra primitves
+// Vectorized, multi-threaded, single processor version of SU3 algebra primitives
 void QPHIX_M_eq_zero(QPHIX_ColorMatrix *);
 
 void QPHIX_M_eq_M(QPHIX_ColorMatrix *, QPHIX_ColorMatrix *);

@@ -10,6 +10,10 @@
 #define QPHIX_asqtad_destroy_L QPHIX_D3_asqtad_destroy_L
 #define QPHIX_asqtad_invert_multi QPHIX_D3_asqtad_invert_multi
 #define QPHIX_asqtad_invert QPHIX_D3_asqtad_invert
+#define QPHIX_hisq_force_multi QPHIX_D3_hisq_force_multi
+#define QPHIX_create_M QPHIX_D3_create_M
+#define QPHIX_destroy_M QPHIX_D3_destroy_M
+#define QPHIX_create_V QPHIX_D3_create_V
 #define QPHIX_create_V_from_raw QPHIX_D3_create_V_from_raw
 #define QPHIX_create_G_from_raw QPHIX_D3_create_G_from_raw
 #define QPHIX_create_F_from_raw QPHIX_D3_create_F_from_raw
@@ -20,8 +24,44 @@
 #define QPHIX_extract_G_to_raw QPHIX_D3_extract_G_to_raw
 #define QPHIX_extract_F_to_raw QPHIX_D3_extract_F_to_raw
 #define QPHIX_symanzik_1loop_gauge_force QPHIX_D3_symanzik_1loop_gauge_force
+#define QPHIX_Complex QPHIX_D_Complex
+#define QPHIX_ColorMatrix QPHIX_D3_ColorMatrix
 #define QPHIX_ColorVector QPHIX_D3_ColorVector
+#define QPHIX_ColorTensor4 QPHIX_D3_ColorTensor4
 #define QPHIX_FermionLinksAsqtad QPHIX_D3_FermionLinksAsqtad
+#define QPHIX_FermionLinksHisq QPHIX_D3_FermionLinksHisq
 #define QPHIX_Force QPHIX_D3_Force
 #define QPHIX_GaugeField QPHIX_D3_GaugeField
+#define QPHIX_layout_from_su3m QPHIX_D3_layout_from_su3m
+#define QPHIX_hisq_create_L_from_4su3m QPHIX_D3_hisq_create_L_from_4su3m
+#define QPHIX_hisq_destroy_L QPHIX_D3_hisq_destroy_L
+#define QPHIX_create_F_from_anti_hermitmat QPHIX_D3_create_F_from_anti_hermitmat
+//#define QPHIX_layout_from_anti_hermitmat QPHIX_D3_layout_from_anti_hermitmat
+#define QPHIX_layout_to_anti_hermitmat QPHIX_D3_layout_to_anti_hermitmat
+#define QPHIX_layout_from_su3m QPHIX_D3_layout_from_su3m
+#define QPHIX_layout_from_4su3m QPHIX_D3_layout_from_4su3m
+#define QPHIX_layout_to_su3m QPHIX_D3_layout_to_su3m
+#define QPHIX_layout_to_4su3m QPHIX_D3_layout_to_4su3m
+#define QPHIX_layout_from_anti_hermitmat QPHIX_D3_layout_from_anti_hermitmat
+#define QPHIX_layout_from_anti_hermitmat QPHIX_D3_layout_from_anti_hermitmat
+#define QPHIX_layout_to_anti_hermitmat QPHIX_D3_layout_to_anti_hermitmat
+#define QPHIX_layout_to_anti_hermitmat QPHIX_D3_layout_to_anti_hermitmat
+#define QPHIX_reset_M QPHIX_D3_reset_M
+#define QPHIX_expose_M QPHIX_D3_expose_M
+
+#define QPHIX_get_mid QPHIX_D3_get_mid
+#define QPHIX_hisq_deriv_multi QPHIX_D3_hisq_deriv_multi
+#define QPHIX_asqtad_deriv_dbg QPHIX_D3_asqtad_deriv_dbg
+#define QPHIX_asqtad_deriv QPHIX_D3_asqtad_deriv
+#define QPHIX_hisq_force_multi_reunit QPHIX_D3_hisq_force_multi_reunit
+#define QPHIX_svd2x2bidiag QPHIX_D3_svd2x2bidiag
+#define QPHIX_svd3x3 QPHIX_D3_svd3x3
+#define u3_un_der_analytic u3_un_der_analytic_double
+#define su3_mat_det su3_mat_det_double
+
+#define qphix_su3_matrix qphix_double_su3_matrix
+
+#define QSU3M QSU3M_double
+#define QSU3V QSU3V_double
+
 #endif // _QPHIX_D3__PC_GENERIC_H
