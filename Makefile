@@ -36,15 +36,6 @@ ENABLE_MPI=1
 TARGET=libqphix
 
 CUSTOM_MAKE=customMake.$(ARCH)
-# ifeq ($(ARCH),avx)
-#   ifeq ($(AVX2),1)
-#     CUSTOM_MAKE=customMake.hsw
-#   endif
-#   ifeq ($(AVX512),1)
-#     # For SKL new custommake has to be created
-#     CUSTOM_MAKE=customMake.skl
-#   endif
-# endif
 include $(CUSTOM_MAKE)
 
 ifeq ($(ENABLE_DEBUG),1)
@@ -67,7 +58,7 @@ else
   CXX = icpc
 endif
 
-CXXFLAGS = -Wall -Wextra $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I$(CODEGEN_PATH)
+CXXFLAGS = -Wall -Wextra $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I./ -I$(CODEGEN_PATH)
 CXXFLAGS += -parallel-source-info=2 -debug inline-debug-info -qopt-report=5
 
 LIB_PREFIX := libqphixmilc
@@ -105,15 +96,10 @@ ifeq ($(ARCH),knl)
 endif
 
 # For Xeon
-ifeq ($(ARCH),avx)
+ifeq ($(ARCH),hsw)
   VECLENF=8
   VECLEND=4
   
-  ifeq ($(AVX512),1) # For SKX
-    # Suffix avx512 is already taken by KNL
-    SUFFIX := _skx
-    MPSSFLAGS = -march=core-avx512 -xCORE-AVX512
-  endif
   ifeq ($(AVX2),1) # For HSW & BDW
     SUFFIX := _avx2
     MPSSFLAGS = -march=core-avx2 -xCORE-AVX2
