@@ -2,9 +2,8 @@
 #define _FERMION_FORCE_COMPLETE_H_
 
 #include "qcd_data_types.h"
-#include "qphix_int.h"
 #include "qphix.h"
-#include "su3.h"
+#include "qphix_internal.h"
 
 #if 1
 #undef _mm_vector

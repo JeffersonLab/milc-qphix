@@ -61,7 +61,4 @@
 
 #define qphix_su3_matrix qphix_double_su3_matrix
 
-#define QSU3M QSU3M_double
-#define QSU3V QSU3V_double
-
 #endif // _QPHIX_D3__PC_GENERIC_H

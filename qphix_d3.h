@@ -44,11 +44,6 @@ typedef struct
   QPHIX_D_Complex t4[3][3][3][3];
 } QPHIX_D3_ColorTensor4;
 
-#include "veclength.h"
-typedef QPHIX_D_Real QSU3V_double[3][2][VECLEN];
-typedef QPHIX_D_Real QSU3M_double[3][3][2][VECLEN];
-typedef QPHIX_D_Complex qphix_double_su3_matrix[3][3];
-
 // create an empty color matrix field
 QPHIX_D3_ColorMatrix *QPHIX_D3_create_M(QPHIX_evenodd_t parity);
 
@@ -150,7 +145,6 @@ void QPHIX_D3_hisq_force_multi(QPHIX_info_t *info, QPHIX_D3_FermionLinksHisq *fl
                             QPHIX_D_Real *residues, QPHIX_D3_ColorVector *x[],
                             int *n_orders_naik);
 
-#include "su3.h"
 void QPHIX_D3_layout_from_su3m(QPHIX_D3_ColorMatrix *dest, SU3_D_Matrix *src);
 void QPHIX_D3_layout_from_4su3m(QPHIX_D3_ColorMatrix *dest[], SU3_D_Matrix *src);
 void QPHIX_D3_layout_to_su3m(SU3_D_Matrix *dest, QPHIX_D3_ColorMatrix *src);
@@ -172,45 +166,6 @@ QPHIX_D3_create_F_from_anti_hermitmat( void *ptr, int SZ );
 
   //void QPHIX_D3_layout_to_anti_hermitmat(QPHIX_D3_ColorMatrix *, anti_hermitmat *);
 void QPHIX_D3_layout_to_anti_hermitmat(void *ptr, QPHIX_D3_ColorMatrix *src[], int SZ);
-void QPHIX_D3_reset_M(QPHIX_D3_ColorMatrix *M2, qphix_double_su3_matrix* M1);
-qphix_double_su3_matrix* QPHIX_D3_expose_M(QPHIX_D3_ColorMatrix* M1);
-
-  // Internal functions for the fermion force
-void QPHIX_D3_get_mid(QPHIX_info_t *info, QPHIX_D3_ColorMatrix **mid,
-                   QPHIX_D3_ColorVector *multix[], double eps[],
-                   double scale, int nterms, int ndist);
-
-void QPHIX_D3_hisq_deriv_multi(QPHIX_info_t *info, QPHIX_D3_FermionLinksHisq *flh,
-                            QPHIX_D3_ColorMatrix *deriv[],
-                            QPHIX_hisq_coeffs_t *hisq_coeff,
-                            double *residues, QPHIX_D3_ColorVector *x[],
-                            int *n_orders_naik);
-
-void QPHIX_D3_asqtad_deriv_dbg(QPHIX_info_t *info, QPHIX_D3_ColorMatrix *gauge[],
-                        QPHIX_D3_ColorMatrix *deriv[], QPHIX_asqtad_coeffs_t *coef,
-                        QPHIX_D3_ColorMatrix *mid_fat[],
-                        QPHIX_D3_ColorMatrix *mid_naik[]);
-
-void QPHIX_D3_asqtad_deriv(QPHIX_info_t *info, QPHIX_D3_ColorMatrix *gauge[],
-                        QPHIX_D3_ColorMatrix *deriv[], QPHIX_asqtad_coeffs_t *coef,
-                        QPHIX_D3_ColorMatrix *mid_fat[],
-                        QPHIX_D3_ColorMatrix *mid_naik[]);
-
-void QPHIX_D3_hisq_force_multi_reunit(QPHIX_info_t *info, QPHIX_D3_ColorMatrix *V[4],
-                                   QPHIX_D3_ColorMatrix *Force[4],
-                                   QPHIX_D3_ColorMatrix *Force_old[4]);
-
-int QPHIX_D3_svd2x2bidiag(QPHIX_info_t *info, double *a00, double *a01,
-                       double *a11, double U2[2][2],
-                       double V2[2][2]);
-
-int QPHIX_D3_svd3x3(QPHIX_info_t *, qphix_double_su3_matrix *, double *,
-                 qphix_double_su3_matrix *, qphix_double_su3_matrix *);
-
-void u3_un_der_analytic_double(QPHIX_info_t *, qphix_double_su3_matrix *,
-			       QPHIX_D3_ColorTensor4 *, QPHIX_D3_ColorTensor4 *);
-
-QPHIX_D_Complex su3_mat_det_double(qphix_double_su3_matrix *);
 
   /**************************************************/
   /* Mapping of generic names to specific precision */

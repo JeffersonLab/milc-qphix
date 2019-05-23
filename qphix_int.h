@@ -8,6 +8,17 @@
 extern "C" {
 #endif
 
+//#ifndef VECLEN
+//#if (QPHIX_PrecisionInt == 1)
+//#define VECLEN 16
+//#endif
+//#if (QPHIX_PrecisionInt == 2)
+//#define VECLEN 8
+//#endif
+//#endif
+
+#define VECLENBYTES 64  /* For aligned malloc */
+
 typedef enum {
   QPHIX_SUCCESS = 0,
   QPHIX_FAIL = 1,
@@ -22,6 +33,20 @@ typedef enum {
 
 typedef float QPHIX_F_Real;
 typedef double QPHIX_D_Real;
+
+#if (QPHIX_PrecisionInt == 1)
+typedef float SU3_Real;
+typedef float QPHIX_Real;
+#endif
+#if (QPHIX_PrecisionInt == 2)
+typedef double SU3_Real;
+typedef double QPHIX_Real;
+#endif
+
+#define QPHIX_real(a) (a).real
+#define QPHIX_imag(a) (a).imag
+#define QPHIX_elem_M(a,ic,jc) ((a)[ic][jc])
+#define Uelem(a,b) QPHIX_elem_M(*U,a,b)
 
 typedef struct {
   int (*node_number)(const int coords[]); /* node no for given latt coord */

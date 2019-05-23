@@ -1,9 +1,8 @@
 #ifndef _FF_BOUNDARY_H
 #define _FF_BOUNDARY_H
 
-//#include "ks_boundary.h"
 #include "qphix.h"
-#include "su3.h"
+#include "qphix_internal.h"
 
 #define MYASSERT(cond) if(!(cond)) { printf("Rank %d: %s:%d Assertion failed\n\t%s evaluates false\n", myRank, __FILE__, __LINE__, #cond); exit(1);}
 

@@ -4,9 +4,6 @@
 extern "C"
 {
 #include "qphix.h"
-#include "su3.h"
-
-#include "veclength.h"
 
 /* Directions */
 #define NDIRS          8           /* number of directions */
