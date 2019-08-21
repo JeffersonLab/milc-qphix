@@ -14,6 +14,7 @@
 
 #define DEBUG 0
 #define TIME_CG 1
+#define CG_DEBUG 0
 
 #include <sys/time.h>
 #if TIME_CG
@@ -277,6 +278,12 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
     int max_cg = max_restarts * niter;  /* Maximum number of iterations */
     msq_x4 = 4.0 * mass * mass;
 
+    if(myRank==0)
+    {
+	printf("niter = %d max_restarts = %d max_cg = %d\n", niter, max_restarts, max_cg);
+	fflush(stdout);
+    }
+
     /* Convert MILC parity to QPhiX's parity. Unlike MILC, QPhiX only has 0 or 1 
      * as parity. */
     int parity         = inv_arg->parity & 1;   
@@ -303,6 +310,11 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
     /* Source norm */
     source_norm = calc_source_norm((fptype*)t_src);
     g_doublesum( &source_norm );
+
+#ifdef CG_DEBUG
+    if(myRank == 0)printf("%s: source_norm = %e\n", myname, (double)source_norm);
+    fflush(stdout);
+#endif
 
     /* Start CG iterations */
     nrestart      = 0;
@@ -337,6 +349,11 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
 
 	return iteration;
     }
+
+#ifdef CG_DEBUG
+    if(myRank==0)printf("rsqmin = %g relmin = %g\n",rsqmin,relrsqmin);
+    fflush(stdout);
+#endif
 
     while(true) {
 
@@ -411,6 +428,12 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
             cgPerfData.iters++;
 #endif             
             //total_iters++;
+
+#ifdef CG_DEBUG
+	    if(myRank==0)printf("CONGRAD: (re)start %d rsq = %.10e relrsq %.10e\n",
+				nrestart, res_arg->final_rsq, res_arg->final_rel);
+	    fflush(stdout);
+#endif
 
             /* Quit when true residual and true relative residual are within
                tolerance or when we exhaust iterations or restarts */
@@ -558,6 +581,16 @@ QPHIX_fptype_asqtad_invert( QPHIX_info_t *info,
         res_arg->size_r    = (fptype)rsq/source_norm;
         res_arg->size_relr = (fptype)relrsq;
 	res_arg->final_rsq     = res_arg->size_r;
+
+#ifdef CG_DEBUG
+	if(myRank==0){printf("iter=%d, rsq/src= %e, relrsq= %e, pkp=%e\n",
+			       iteration,(double)res_arg->size_r,
+			       (double)res_arg->size_relr,
+			       (double)pkp);fflush(stdout);}
+	fflush(stdout);
+#endif
+    
+
         b = (fptype)rsq/oldrsq;
 
 #if TIME_CG
