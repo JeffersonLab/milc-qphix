@@ -21,6 +21,7 @@
 
 #define DEBUG 0
 #define TIME_CG 1
+#define CG_DEBUG 0
 
 #include <sys/time.h>
 #if TIME_CG
@@ -255,8 +256,8 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 			      QPHIX_fptype_ColorVector *out[],
 			      QPHIX_fptype_ColorVector *in )
 {
-    if(myRank==0) printf("QPHIX_fptype_asqtad_invert_multi\n");
-    fflush(stdout);
+  if(myRank==0) printf("QPHIX_fptype_asqtad_invert_multi\n");
+  fflush(stdout);
 
   if( num_offsets==0 ) {
     for(int i=0; i<num_offsets; ++i)
@@ -480,6 +481,10 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
   total_iters++;
 */
   double rsqstop = rsqmin * source_norm;
+#ifdef CG_DEBUG
+  if(myRank == 0)printf("%s: source_norm = %e\n", myname, (double)source_norm);
+  fflush(stdout);
+#endif
   
   for(j=0;j<num_offsets;j++){
     zeta_im1[j] = zeta_i[j] = 1.0;
@@ -554,7 +559,8 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 	  finished[j] = 1;
 	}
 	if(finished[j]==1&&j==num_offsets_now-1 && j>j_low) num_offsets_now--;
-	//printf("beta_i[%d] = %f\n zeta_i[%d] = %f\n zeta_ip1[%d] = %f\n", j, beta_i[j], j, zeta_i[j], j, zeta_ip1[j]);
+	//	printf("beta_i[%d] = %f\n zeta_i[%d] = %f\n zeta_ip1[%d] = %f\n", j, beta_i[j], j, zeta_i[j], j, zeta_ip1[j]);
+	//	fflush(stdout);
       }
     
     /* dest <- dest + beta*cg_p ( cg_p = pm[j_low], dest = psim[j_low] ) */
@@ -574,6 +580,11 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 
     g_doublesum(&rsq);
     
+#if CG_DEBUG
+    if(myRank==0)printf("%s: iter %d rsq = %g offsets = %d\n", 
+			myname, iteration, rsq, num_offsets_now);
+    fflush(stdout);
+#endif
     if( rsq <= rsqstop ){
 
       /* calculate of t_dest */
