@@ -14,7 +14,7 @@
 
 #define DEBUG 0
 #define TIME_CG 1
-#define CG_DEBUG 0
+//#define CG_DEBUG
 
 #include <sys/time.h>
 #if TIME_CG
