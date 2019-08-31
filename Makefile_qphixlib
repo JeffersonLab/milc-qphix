@@ -22,30 +22,41 @@ endif
 ENABLE_MPI= 1
 
 ifeq ($(CRAY),1)
+
   ifeq ($(ENABLE_MPI),1)
-  ifneq ($(ASSUME_MULTINODE),1)
+
+    ifneq ($(ASSUME_MULTINODE),1)
+      CXX = ${PK_CXX}
+    else
+      CXX = icpc
+    endif
+
+  else
+
+    CXX = icpc
+
+  endif
+
+else
+
+  ifeq ($(ENABLE_MPI),1)
+  
+    ifneq ($(ASSUME_MULTINODE),1)
     CXX = ${PK_CXX}
+    else
+    CXX = icpc
+    endif
+
   else
     CXX = icpc
   endif
-  else
-    CXX = icpc
-  endif
-else
-ifeq ($(ENABLE_MPI),1)
-ifneq ($(ASSUME_MULTINODE),1)
-CXX = ${PK_CXX}
-else
-CXX = icpc
+
 endif
-else
-CXX = icpc
-endif
-endif
+
 ifeq ($(DEBUG),1)
-OPTFLAGS = -O0
+  OPTFLAGS = -O0
 else
-OPTFLAGS = -O3
+  OPTFLAGS = -O3
 endif
 
 CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -restrict $(PREFFLAGS) -I$(SEPHOME)/include -I./ -I../milc-qphix-codegen
@@ -53,107 +64,119 @@ CXXFLAGS = -Wall -Wextra -g $(OPTFLAGS) -qopenmp -fargument-noalias-global -rest
 CXXFLAGS += -parallel-source-info=2 -debug inline-debug-info -qopt-report=5
 
 #ifeq ($(PRECISION),1)
-#override QPHIX_PrecisionInt=1
+  #override QPHIX_PrecisionInt=1
 #else
-#override QPHIX_PrecisionInt=2
+  #override QPHIX_PrecisionInt=2
 #endif
 
 ifeq ($(mode),mic)
-#ifeq ($(PRECISION),1)
-VECLENF=16
-VECLEND=8
-QPHIXLIB=libqphixmilc_mic_single.a
-ifeq ($(ENABLE_MPI),1)
-QPHIXLIB=libqphixmilc_mic.a
-endif
-ifeq ($(AVX512),1)
-ifeq ($(SKX),1)
-QPHIXLIB=libqphixmilc_skx_single.a
-else
-QPHIXLIB=libqphixmilc_avx512_single.a
-endif
-ifeq ($(ENABLE_MPI),1)
-ifeq ($(SKX),1)
-QPHIXLIB=libqphixmilc_skx.a
-else
-QPHIXLIB=libqphixmilc_avx512.a
-endif
-endif
-endif
-#override VECLEN=16
-#else
-#override VECLEN=8
+
+  #ifeq ($(PRECISION),1)
+  VECLENF=16
+  VECLEND=8
+  QPHIXLIB=libqphixmilc_mic_single.a
+  ifeq ($(ENABLE_MPI),1)
+    QPHIXLIB=libqphixmilc_mic.a
+  endif
+  ifeq ($(AVX512),1)
+    ifeq ($(SKX),1)
+      QPHIXLIB=libqphixmilc_skx_single.a
+    else
+      QPHIXLIB=libqphixmilc_avx512_single.a
+    endif
+    ifeq ($(ENABLE_MPI),1)
+      ifeq ($(SKX),1)
+        QPHIXLIB=libqphixmilc_skx.a
+      else
+        QPHIXLIB=libqphixmilc_avx512.a
+      endif
+    endif
+  endif
+
+  #override VECLEN=16
+  #else
+  #override VECLEN=8
+
 endif
 
 ifeq ($(mode),avx)
-VECLENF=8
-VECLEND=4
-QPHIXLIB=libqphixmilc_single.a
-ifeq ($(ENABLE_MPI),1)
-QPHIXLIB=libqphixmilc.a
-endif
-ifeq ($(AVX2),1)
-QPHIXLIB=libqphixmilc_avx2_single.a
-ifeq ($(ENABLE_MPI),1)
-QPHIXLIB=libqphixmilc_avx2.a
-endif
-endif
-#ifeq ($(PRECISION),1)
-#override VECLEN=8
-#else
-#override VECLEN=4
-#endif
+
+  VECLENF=8
+  VECLEND=4
+  QPHIXLIB=libqphixmilc_single.a
+
+  ifeq ($(ENABLE_MPI),1)
+    QPHIXLIB=libqphixmilc.a
+  endif
+
+  ifeq ($(AVX2),1)
+    QPHIXLIB=libqphixmilc_avx2_single.a
+    ifeq ($(ENABLE_MPI),1)
+      QPHIXLIB=libqphixmilc_avx2.a
+    endif
+  endif
+
+  #ifeq ($(PRECISION),1)
+  #override VECLEN=8
+  #else
+  #override VECLEN=4
+  #endif
+
 endif
 
 ifeq ($(mode),sse)
-VECLENF=4
-VECLEND=2
-#ifeq ($(PRECISION),1)
-#override VECLEN=4
-#else
-#override VECLEN=2
-#endif
-QPHIXLIB=libqphixmilc_sse.a
-ifeq ($(ENABLE_MPI),1)
-QPHIXLIB=libqphixmilc_sse_mpi.a
-endif
-MINCT=2
-MPSSFLAGS = -msse3
+
+  VECLENF=4
+  VECLEND=2
+  #ifeq ($(PRECISION),1)
+  #override VECLEN=4
+  #else
+  #override VECLEN=2
+  #endif
+  QPHIXLIB=libqphixmilc_sse.a
+  ifeq ($(ENABLE_MPI),1)
+    QPHIXLIB=libqphixmilc_sse_mpi.a
+  endif
+  MINCT=2
+  MPSSFLAGS = -msse3
+
 endif
 
 ifeq ($(mode),scalar)
-#override VECLEN=1
-#override SOALEN=1
-VECLENF=1
-VECLEND=1
-QPHIXLIB=libqphixmilc_scalar.a
-ifeq ($(ENABLE_MPI),1)
-QPHIXLIB=libqphixmilc_scalar_mpi.a
-endif
+
+  #override VECLEN=1
+  #override SOALEN=1
+  VECLENF=1
+  VECLEND=1
+  QPHIXLIB=libqphixmilc_scalar.a
+  ifeq ($(ENABLE_MPI),1)
+    QPHIXLIB=libqphixmilc_scalar_mpi.a
+  endif
+
 endif
 
 
 ifeq ($(mode),mic)
-ifneq ($(AVX512),1)
-MPSSFLAGS = -mmic -mGLOB_default_function_attrs="use_gather_scatter_hint=off"
-else
-ifeq ($(SKX),1)
-MPSSFLAGS = -xCORE-AVX512 #-qopt-zmm-usage=high
-else
-MPSSFLAGS = -xMIC-AVX512
-endif
-yesnolist += AVX512
-endif
+  ifneq ($(AVX512),1)
+    MPSSFLAGS = -mmic -mGLOB_default_function_attrs="use_gather_scatter_hint=off"
+  else
+    ifeq ($(SKX),1)
+      MPSSFLAGS = -xCORE-AVX512 -qopt-zmm-usage=high
+    else
+      MPSSFLAGS = -xMIC-AVX512
+    endif
+  yesnolist += AVX512
+  endif
 endif
 
 ifeq ($(mode),avx)
-ifneq ($(AVX2),1)
-MPSSFLAGS = -mavx
-else
-MPSSFLAGS = -march=core-avx2 -xCORE-AVX2
-endif
-MINCT=2
-yesnolist += AVX2
+  ifneq ($(AVX2),1)
+    MPSSFLAGS = -mavx
+  else
+    MPSSFLAGS = -march=core-avx2 -xCORE-AVX2
+  endif
+  MINCT=2
+  yesnolist += AVX2
 endif
 
 export
