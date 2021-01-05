@@ -123,7 +123,7 @@ QPHIX_F3_create_V_from_raw( QPHIX_F_Real *src, QPHIX_evenodd_t evenodd )
 	    z1 = z / Vz; z2 = z % Vz;
 	    t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
 	    for(int c = 0; c < 3; c++) {
@@ -158,7 +158,7 @@ QPHIX_F3_create_V_from_raw( QPHIX_F_Real *src, QPHIX_evenodd_t evenodd )
             z1 = (z-Lsz) / Vz; z2 = z % Vz;
             t1 = (t-Lst) / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
             for(int c = 0; c < 3; c++) {
