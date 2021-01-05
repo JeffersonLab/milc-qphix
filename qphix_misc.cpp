@@ -21,12 +21,12 @@
 #include "qphix_internal.h"
 
 #if QPHIX_PrecisionInt == 1
-int qphix_sites_on_node;
-int qphix_even_sites_on_node;
+size_t qphix_sites_on_node;
+size_t qphix_even_sites_on_node;
 //int minCt;
 #else
-extern int qphix_sites_on_node;
-extern int qphix_even_sites_on_node;
+extern size_t qphix_sites_on_node;
+extern size_t qphix_even_sites_on_node;
 #endif
 
 extern char * BoundTableF, * BoundTableD;

@@ -63,7 +63,7 @@
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
 
-extern int qphix_sites_on_node;
+extern size_t qphix_sites_on_node;
 
 /******************************** BLAS Kernels ********************************/
 static double

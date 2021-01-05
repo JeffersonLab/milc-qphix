@@ -73,8 +73,8 @@ const int nGX = (VECLEN < 2 ? 1 : 2);
 const int nGY = (VECLEN < 4 ? 1 : 2);
 const int nGZ = (VECLEN < 8 ? 1 : 2);
 const int nGT = (VECLEN < 16 ? 1 : 2);
-extern int qphix_even_sites_on_node;
-//extern int sites_on_node;
+extern size_t qphix_even_sites_on_node;
+//extern size_t sites_on_node;
 
 static hrtimer_t timer = 0;
 
@@ -108,7 +108,7 @@ QPHIX_F3_create_V_from_raw( QPHIX_F_Real *src, QPHIX_evenodd_t evenodd )
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i) 
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i) 
     {
 	    int y = i / Nxh;
 	    int x = i - y * Nxh;
@@ -144,7 +144,7 @@ QPHIX_F3_create_V_from_raw( QPHIX_F_Real *src, QPHIX_evenodd_t evenodd )
 #ifdef _OPENMP
 #pragma omp for default(shared) num_threads(nThreads)     
 #endif
-	for( int i=0; i<n_odd_sites_on_node; ++i ) {
+	for( size_t i=0; i<n_odd_sites_on_node; ++i ) {
             int y = i / Nxh;
             int x = i - y * Nxh;
             int z = y / Ny;
@@ -217,7 +217,7 @@ QPHIX_F3_GaugeField
             pack_gauge_face_dir(tid, rawsrcp, 2*dir+1, 1);
         }
 
-    	for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+    	for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
     	{
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -232,7 +232,7 @@ QPHIX_F3_GaugeField
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 	    int xodd = (y + z + t) & 1;
 
@@ -280,7 +280,7 @@ QPHIX_F3_GaugeField
         {
             pack_gauge_face_dir(tid, rawsrc, 2*dir+1, 0);
         }
-    	for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+    	for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
     	{
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -295,7 +295,7 @@ QPHIX_F3_GaugeField
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 	    int xodd = (y + z + t) & 1;
 
@@ -381,7 +381,7 @@ QPHIX_F3_Force
                 pack_momentum_face_dir(tid, rawsrcp, 2*dir+1, 1);
         }
 
-        for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+        for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -396,7 +396,7 @@ QPHIX_F3_Force
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
             int xodd = (y + z + t) & 1;
 
@@ -443,7 +443,7 @@ QPHIX_F3_Force
     }
     else
     {
-        for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+        for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -458,7 +458,7 @@ QPHIX_F3_Force
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
             int xodd = (y + z + t + 1) & 1;
 
@@ -502,7 +502,7 @@ QPHIX_F3_extract_V_to_raw( QPHIX_F_Real *dest, QPHIX_F3_ColorVector *src, QPHIX_
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i)
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i)
     {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -517,7 +517,7 @@ QPHIX_F3_extract_V_to_raw( QPHIX_F_Real *dest, QPHIX_F3_ColorVector *src, QPHIX_
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
             for(int c = 0; c < 3; c++) {
@@ -529,7 +529,7 @@ QPHIX_F3_extract_V_to_raw( QPHIX_F_Real *dest, QPHIX_F3_ColorVector *src, QPHIX_
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i)
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i)
     {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -544,7 +544,7 @@ QPHIX_F3_extract_V_to_raw( QPHIX_F_Real *dest, QPHIX_F3_ColorVector *src, QPHIX_
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
             for(int c = 0; c < 3; c++) {
@@ -587,7 +587,7 @@ void QPHIX_F3_extract_G_to_raw( QPHIX_F_Real *dest, QPHIX_F3_GaugeField  *src, Q
 	    pack_gauge_face_dir(tid, gf, 2*dir, 0);
 	}
 
-	for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+	for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
 	{
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -602,7 +602,7 @@ void QPHIX_F3_extract_G_to_raw( QPHIX_F_Real *dest, QPHIX_F3_GaugeField  *src, Q
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
             int xodd = (y + z + t) & 1;
 
@@ -668,7 +668,7 @@ void QPHIX_F3_extract_G_to_raw( QPHIX_F_Real *dest, QPHIX_F3_GaugeField  *src, Q
                 pack_gauge_face_dir(tid, gf, 2*dir, 1);
 	}
 
-        for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+        for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -683,7 +683,7 @@ void QPHIX_F3_extract_G_to_raw( QPHIX_F_Real *dest, QPHIX_F3_GaugeField  *src, Q
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
             int xodd = (y + z + t + 1) & 1;
 
@@ -770,7 +770,7 @@ void QPHIX_F3_extract_F_to_raw( QPHIX_F_Real *dest, QPHIX_F3_Force  *src, QPHIX_
                 pack_momentum_face_dir(tid, gf, 2*dir, 0);
 	}
 
-        for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+        for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -785,7 +785,7 @@ void QPHIX_F3_extract_F_to_raw( QPHIX_F_Real *dest, QPHIX_F3_Force  *src, QPHIX_
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
             int xodd = (y + z + t) & 1;
 
@@ -863,7 +863,7 @@ void QPHIX_F3_extract_F_to_raw( QPHIX_F_Real *dest, QPHIX_F3_Force  *src, QPHIX_
                 pack_momentum_face_dir(tid, gf, 2*dir, 1);
 	}
 
-        for(int i=tid; i<qphix_even_sites_on_node; i+=nThreads)
+        for(size_t i=tid; i<qphix_even_sites_on_node; i+=nThreads)
         {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -878,7 +878,7 @@ void QPHIX_F3_extract_F_to_raw( QPHIX_F_Real *dest, QPHIX_F3_Force  *src, QPHIX_
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
             int xodd = (y + z + t + 1) & 1;
 
@@ -995,7 +995,7 @@ QPHIX_F3_asqtad_create_L_from_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i)
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i)
     {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -1010,7 +1010,7 @@ QPHIX_F3_asqtad_create_L_from_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
 	    for( int dir=0; dir<4; ++dir )
@@ -1039,7 +1039,7 @@ QPHIX_F3_asqtad_create_L_from_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i)
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i)
     {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -1054,7 +1054,7 @@ QPHIX_F3_asqtad_create_L_from_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
             for( int dir=0; dir<4; ++dir )
@@ -1122,7 +1122,7 @@ QPHIX_F3_asqtad_extract_L_to_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F3
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i)
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i)
     {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -1137,7 +1137,7 @@ QPHIX_F3_asqtad_extract_L_to_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F3
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
             for( int dir=0; dir<4; ++dir )
@@ -1164,7 +1164,7 @@ QPHIX_F3_asqtad_extract_L_to_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F3
 #ifdef _OPENMP
 #pragma omp parallel for default(shared) num_threads(nThreads)     
 #endif
-    for(int i=0; i<qphix_even_sites_on_node; ++i)
+    for(size_t i=0; i<qphix_even_sites_on_node; ++i)
     {
             int y = i / Nxh;
             int x = i - y * Nxh;
@@ -1179,7 +1179,7 @@ QPHIX_F3_asqtad_extract_L_to_raw( QPHIX_F_Real *fat, QPHIX_F_Real *lng, QPHIX_F3
             z1 = z / Vz; z2 = z % Vz;
             t1 = t / Vt; t2 = t % Vt;
 
-            int ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
+            size_t ind = t2*Pxyz+z2*Pxy+y2*Vxh+x2;
             int v = ((t1*nGZ+z1)*nGY+y1)*nGX+x1;
 
             for( int dir=0; dir<4; ++dir )

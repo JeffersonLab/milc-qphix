@@ -74,7 +74,7 @@ extern int PadBound;
 extern int PadNeigh;
 extern char * BoundTable;
 extern unsigned int * NeighTable;
-extern int qphix_even_sites_on_node;
+extern size_t qphix_even_sites_on_node;
 
 static void
 *initBuf(void *b, size_t s)
