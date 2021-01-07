@@ -477,7 +477,7 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
        we use it. Otherwise, we create our own later on */
     MPI_COMM_THISJOB = *((MPI_Comm *)layout->mpi_comm);
     if(layout->mpi_comm){
-      printf("Setting MPI_COMM_THISJOB from layout structure\n");
+      // printf("Setting MPI_COMM_THISJOB from layout structure\n");
       int flag = MPI_Barrier(MPI_COMM_THISJOB);    
       if(flag != MPI_SUCCESS) {
 	err_func(&flag);
