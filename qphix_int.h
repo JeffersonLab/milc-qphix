@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#include <sys/types.h>
+
 typedef enum {
   QPHIX_SUCCESS = 0,
   QPHIX_FAIL = 1,
@@ -23,18 +25,21 @@ typedef enum {
 typedef float QPHIX_F_Real;
 typedef double QPHIX_D_Real;
 
+#define QPHIX_EXTENDED_LAYOUT
+
 typedef struct {
-  int (*node_number)(const int coords[]); /* node no for given latt coord */
-  int (*node_index)(const int coords[]);  /* site rank for given latt coord */
-  int latdim;                             /* number of lattice dimensions */
-  int *latsize;                           /* physical lattice lengths */
-  int machdim;                            /* number of logical machine dims */
-  int *machsize;                          /* logical grid lengths */
-  int this_node;                          /* lexicographic node number */
-  int sites_on_node;
-  int even_sites_on_node;                 /* If needed */
+  int (*node_number)(const int coords[]);   /* node no for given latt coord */
+  size_t (*node_index)(const int coords[]); /* site rank for given latt coord */
+  int latdim;                               /* number of lattice dimensions */
+  int *latsize;                             /* physical lattice lengths */
+  int machdim;                              /* number of logical machine dims */
+  int *machsize;                            /* logical grid lengths */
+  int this_node;                            /* lexicographic node number */
+  size_t sites_on_node;			    
+  size_t even_sites_on_node;                   /* If needed */
+  void *mpi_comm;                           /* Preinitialize MPI Communicator */
 } QPHIX_layout_t;
-#define QPHIX_LAYOUT_ZERO ((QPHIX_layout_t){NULL,NULL,0,NULL,0,NULL,0,0})
+#define QPHIX_LAYOUT_ZERO ((QPHIX_layout_t){NULL,NULL,0,NULL,0,NULL,0,0,0,NULL})
 
 typedef struct {
   double final_sec;        /* (out) total number of seconds used */

@@ -20,12 +20,12 @@
 #include "qphix_internal.h"
 
 #if QPHIX_PrecisionInt == 1
-int qphix_sites_on_node;
-int qphix_even_sites_on_node;
+size_t qphix_sites_on_node;
+size_t qphix_even_sites_on_node;
 //int minCt;
 #else
-extern int qphix_sites_on_node;
-extern int qphix_even_sites_on_node;
+extern size_t qphix_sites_on_node;
+extern size_t qphix_even_sites_on_node;
 #endif
 
 extern char * BoundTableF, * BoundTableD;
@@ -286,6 +286,19 @@ static void neigh_lex_coords(int coords[], const int latdim, const int size[], c
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
 
+#ifdef ENABLE_MPI
+static void
+err_func(int *stat)
+{
+  int len;
+  char err_string[MPI_MAX_ERROR_STRING];
+
+  printf("MPI error number: %i\n", *stat);
+  MPI_Error_string(*stat, err_string, &len);
+  printf("%s\n", err_string);
+}
+#endif
+
 QPHIX_status_t 
 QPHIX_init_fptype(QPHIX_layout_t *layout)
 {
@@ -330,13 +343,25 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
 	return QPHIX_FAIL;
     }
 #else
-    MPI_Barrier(MPI_COMM_WORLD);    
+    /* If a communicator is provided (layout->mpi_comm is not NULL),
+       we use it. Otherwise, we create our own later on */
+    MPI_COMM_THISJOB = *((MPI_Comm *)layout->mpi_comm);
+    if(layout->mpi_comm){
+      // printf("Setting MPI_COMM_THISJOB from layout structure\n");
+      int flag = MPI_Barrier(MPI_COMM_THISJOB);    
+      if(flag != MPI_SUCCESS) {
+	err_func(&flag);
+	return QPHIX_FAIL;
+      }
+    }
 #endif
 
     int m_coord[4], n_coord[8];
     const int mdim = layout->machdim;
-    lex_coords(m_coord, mdim, geometry, (const size_t)myRank);
-    neigh_lex_coords(n_coord, (const int)layout->latdim, geometry, (const size_t)myRank, layout->node_number);
+    //lex_coords(m_coord, mdim, geometry, (const size_t)myRank);
+    lex_coords(m_coord, mdim, geometry, myRank);
+    //neigh_lex_coords(n_coord, (const int)layout->latdim, geometry, (const size_t)myRank, layout->node_number);
+    neigh_lex_coords(n_coord, layout->latdim, geometry, myRank, layout->node_number);
 
     setup_comms( m_coord, n_coord );
 

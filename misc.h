@@ -66,12 +66,17 @@ extern "C" int omp_get_thread_num();
 // Allocate and deallocate macros
 #include <fcntl.h>
 #include <sys/mman.h>
+#ifdef MALLOC
+#undef MALLOC
+#endif
 #define MALLOC(size,alignment) \
 	mmap(NULL,size,PROT_READ|PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED | MAP_HUGETLB | MAP_POPULATE, -1, 0)
 #define FREE(addr) munmap(addr,0)
 #else
 // Otherwise use regular _mm_malloc
+#ifndef MALLOC
 #define MALLOC(size,alignment)  _mm_malloc(size,alignment);
+#endif
 #define FREE(addr) _mm_free(addr)
 #endif
 

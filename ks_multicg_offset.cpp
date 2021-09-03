@@ -21,6 +21,7 @@
 
 #define DEBUG 0
 #define TIME_CG 1
+//#define CG_DEBUG
 
 #include <sys/time.h>
 #if TIME_CG
@@ -62,7 +63,7 @@
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
 
-extern int qphix_sites_on_node;
+extern size_t qphix_sites_on_node;
 
 /******************************** BLAS Kernels ********************************/
 static double
@@ -211,8 +212,8 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 			      QPHIX_fptype_ColorVector *out[],
 			      QPHIX_fptype_ColorVector *in )
 {
-    if(myRank==0) printf("QPHIX_fptype_asqtad_invert_multi\n");
-    fflush(stdout);
+  if(myRank==0) printf("QPHIX_fptype_asqtad_invert_multi\n");
+  fflush(stdout);
 
   if( num_offsets==0 ) {
     for(int i=0; i<num_offsets; ++i)
@@ -308,6 +309,7 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 	MYASSERT(pm[j]!=0x00);
     }
 
+/*
     shifts = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     zeta_i = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     zeta_im1 = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
@@ -315,6 +317,14 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
     beta_i = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     beta_im1 = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
     alpha = (fptype * restrict )malloc(num_offsets*sizeof(fptype));
+*/
+    shifts = (fptype * )malloc(num_offsets*sizeof(fptype));
+    zeta_i = (fptype * )malloc(num_offsets*sizeof(fptype));
+    zeta_im1 = (fptype * )malloc(num_offsets*sizeof(fptype));
+    zeta_ip1 = (fptype * )malloc(num_offsets*sizeof(fptype));
+    beta_i = (fptype * )malloc(num_offsets*sizeof(fptype));
+    beta_im1 = (fptype * )malloc(num_offsets*sizeof(fptype));
+    alpha = (fptype * )malloc(num_offsets*sizeof(fptype));
 
     finished = (int *)malloc(sizeof(int)*num_offsets);
     double offset_low = 1.0e+20;
@@ -409,6 +419,10 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
   }
   
   double rsqstop = rsqmin * source_norm;
+#ifdef CG_DEBUG
+  if(myRank == 0)printf("%s: source_norm = %e\n", myname, (double)source_norm);
+  fflush(stdout);
+#endif
   
   for(j=0;j<num_offsets;j++){
     zeta_im1[j] = zeta_i[j] = 1.0;
@@ -498,6 +512,11 @@ QPHIX_fptype_asqtad_invert_multi( QPHIX_info_t *info,
 
     g_doublesum(&rsq);
     
+#if CG_DEBUG
+    if(myRank==0)printf("%s: iter %d rsq = %g offsets = %d\n", 
+			myname, iteration, rsq, num_offsets_now);
+    fflush(stdout);
+#endif
     if( rsq <= rsqstop ){
 
       /* calculate of t_dest */

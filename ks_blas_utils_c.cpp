@@ -1,11 +1,10 @@
+#ifdef ENABLE_MPI
+#include <mpi.h>
+#endif
 #include "ks_blas_utils_c.h"
 #include "ks_config.h"  /* macros */
 #include "ks_globals.h" /* All global vars and macros (Nt, Nz, Nx, Ny etc.) */
 #include <math.h>
-
-#ifdef ENABLE_MPI
-#include <mpi.h>
-#endif
 
 /* Squaring the magnitude of a VECLEN array of spinors. */
 double
@@ -103,7 +102,7 @@ g_doublesum (double *d)
 {
 #ifdef ENABLE_MPI
     double work = *d;
-    MPI_Allreduce( &work, d, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+    MPI_Allreduce( &work, d, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_THISJOB );
 #endif
 }
 #endif
@@ -126,6 +125,7 @@ calc_soalen_rel_residue (KS *sp1, KS *sp2)
     /* get the residue */
     for(int i = 0; i < VECLEN; i++) {
         //printf("DEBUG: MBENCH num : %g den : %g\n", num[i], den[i]);
+	if(num[i] == 0)continue;
         residue += (den[i] == 0) ? 1.0 : (num[i]/den[i]);
         //printf("DEBUG: MBENCH residue : %g\n", residue);
     }    
@@ -138,7 +138,8 @@ relative_residue (KS *p, KS *q, int parity)
 {
     double residue = 0.0;
 #pragma omp parallel for num_threads (nThreads) reduction(+:residue)
-    for(int i = 0; i < Vxh*Vy*Vz*Vt; i++) {
+    // for(int i = 0; i < Vxh*Vy*Vz*Vt; i++) {
+    for(int i = 0; i < Pxyz*Vt; i++) {
         residue += calc_soalen_rel_residue(&p[i], &q[i]);
     }
     //printf("MBENCH Residue : %g\n", residue);

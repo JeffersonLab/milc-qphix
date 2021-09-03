@@ -105,6 +105,10 @@ int myRank;
 int nRanks;
 bool printAllRanks;
 int nParallelRecvs, nParallelSends;
+#ifdef ENABLE_MPI
+#include <mpi.h>
+MPI_Comm MPI_COMM_THISJOB;
+#endif
 
 Phaser *phaserF=0x00;
 //Phaser *phaser_dslash;
@@ -202,7 +206,7 @@ setup_mbench( int *lattice, int *geom, int *my_coord, int *my_neigh_ranks, int m
 		//printf("Rank: %d (pid %d) waiting for gdb to connect...\n", myRank, getpid());
 		//volatile int dummy = 0;
 		//while(dummy == 0) ;
-		MPI_Barrier(MPI_COMM_WORLD);
+		MPI_Barrier(MPI_COMM_THISJOB);
 #endif
     setup_comms(my_coord, my_neigh_ranks);
 
