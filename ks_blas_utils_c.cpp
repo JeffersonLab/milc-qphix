@@ -5,7 +5,6 @@
 #include "ks_config.h"  /* macros */
 #include "ks_globals.h" /* All global vars and macros (Nt, Nz, Nx, Ny etc.) */
 #include <math.h>
-#include <cassert>
 
 /* Squaring the magnitude of a VECLEN array of spinors. */
 double
@@ -134,13 +133,10 @@ calc_soalen_rel_residue (KS *sp1, KS *sp2)
     return residue;
 }
 
-extern size_t qphix_even_sites_on_node;
-
 fptype 
 relative_residue (KS *p, KS *q, int parity)
 {
     double residue = 0.0;
-    assert(qphix_even_sites_on_node % VECLEN == 0);
 #pragma omp parallel for num_threads (nThreads) reduction(+:residue)
     // for(int i = 0; i < Vxh*Vy*Vz*Vt; i++) {
     for(int i = 0; i < Pxyz*Vt; i++) {
