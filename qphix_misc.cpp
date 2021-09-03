@@ -15,6 +15,7 @@
 #include "ks_globals.h"        /* All global values and macros */
 #include "ks_long_dslash.h"
 #include "ks_boundary.h"
+#include "gf_boundary.h"
 #include "misc.h"
 
 #include "qphix_internal.h"
@@ -33,6 +34,14 @@ extern unsigned int * NeighTableF, * NeighTableD;
 extern int BLENGTHF, BLENGTHD;
 extern int PadBoundF, PadBoundD;
 extern int PadNeighF, PadNeighD;
+
+/* Gauge force */
+#ifdef QPHIX_GF
+extern char * GFBoundTable;
+extern unsigned int * GFNeighTable;
+extern int GFBLENGTH;
+#endif
+
 /* Set up ks dslash boundary&neighbor tables */
 static void init_ks_dslash_imp()
 {
@@ -220,6 +229,118 @@ static void init_ks_dslash_imp()
     } // end omp loop
 }
 
+#if 0
+#ifdef QPHIX_GF
+static void init_gauge_force( )
+{
+    int Bbytes=8*2/8;
+    int Lsize=Pxyz*Vt;
+    int Nbytes=8*2*sizeof(unsigned int);
+    int Vbytes=VECLEN*sizeof(fptype);
+    MYASSERT((GFBLENGTH = Vbytes/Bbytes)>0);
+    if(GFBoundTable==0x00)
+        MYASSERT((GFBoundTable = (char *)_mm_malloc(Lsize*Bbytes,64))!=0x00);
+    if(GFNeighTable==0x00)
+        MYASSERT((GFNeighTable = NeighTable)!=0x00);
+    int otherparity=1;
+    if(GF_PARITY==QPHIX_ODD) otherparity=0;
+    else MYASSERT(GF_PARITY==QPHIX_EVEN || GF_PARITY==QPHIX_EVENODD);
+#ifdef _OPENMP
+#pragma omp parallel default(shared) num_threads(nThreads)
+#endif
+    {
+#ifdef _OPENMP
+        int tid = omp_get_thread_num();
+#else
+        int tid = 0;
+#endif
+        Phaser::PhaserState ps;
+        int x, y, z, t, x_next, y_next, z_next, t_next;
+        cb = 0;
+        {
+          bool loop_ret = phaser->start(ps, tid, x, y, z, t);
+          int PBnow = 0; //cb*PadBound;
+          while(loop_ret) {
+            loop_ret = phaser->next(ps, x_next, y_next, z_next, t_next);
+            const int xodd = (y + z + t + otherparity) & 1;
+            int ind = t*Pxyz+z*Pxy+y*Vxh+x;
+            /* accumulate */
+            GFBoundTable[PBnow+Bbytes*ind] = ~0;
+            /* isBoundary */
+            GFBoundTable[PBnow+Bbytes*ind+1] = 0;
+            if(!local_dir[0]) {
+              if(x+xodd-2 < 0) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 1;
+		GFBoundTable[PBnow+Bbytes*ind+1] ^= 1;
+              }
+              if(x+xodd+1 >= Vxh) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 2;
+		GFBoundTable[PBnow+Bbytes*ind+1] ^= 2;
+              }
+	    }
+	    else {
+	      if(x+xodd-1 < 0) GFBoundTable[PBnow+Bbytes*ind+1] ^= 1;
+	      if(x+xodd >= Vxh) GFBoundTable[PBnow+Bbytes*ind+1] ^= 2;
+	    }
+
+	    if(!local_dir[1]) {
+              if(y <= 2) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 4;
+                GFBoundTable[PBnow+Bbytes*ind+1] ^= 4;
+              }
+              if(y >= Vy-3) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 8;
+                GFBoundTable[PBnow+Bbytes*ind+1] ^= 8;
+              }
+	    }
+	    else {
+	      if(y == 0) GFBoundTable[PBnow+Bbytes*ind+1] ^= 4;
+	      if(y == Vy-1) GFBoundTable[PBnow+Bbytes*ind+1] ^= 8;
+	    }
+
+            if(!local_dir[2]) {
+              if(z <= 2) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 16;
+                GFBoundTable[PBnow+Bbytes*ind+1] ^= 16;
+              }
+	      if(z >= Vz-3) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 32;
+                GFBoundTable[PBnow+Bbytes*ind+1] ^= 32;
+              }
+	    }
+	    else {
+	      if(z == 0) GFBoundTable[PBnow+Bbytes*ind+1] ^= 16;
+	      if(z == Vz-1) GFBoundTable[PBnow+Bbytes*ind+1] ^= 32;
+	    }
+
+            if(!local_dir[3]) {
+              if(t <= 2) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 64;
+                GFBoundTable[PBnow+Bbytes*ind+1] ^= 64;
+              }
+              if(t >= Vt-3) {
+                GFBoundTable[PBnow+Bbytes*ind] ^= 128;
+                GFBoundTable[PBnow+Bbytes*ind+1] ^= 128;
+              }
+	    }
+	    else {
+	      if(t == 0) GFBoundTable[PBnow+Bbytes*ind+1] ^= 64;
+	      if(t == Vt-1) GFBoundTable[PBnow+Bbytes*ind+1] ^= 128;
+	    }
+
+            x=x_next;
+            y=y_next;
+            z=z_next;
+            t=t_next;
+        }
+      }
+    } // end omp loop
+
+}
+
+#endif
+#endif
+
 /* Convert rank to coordinates */
 static void lex_coords(int coords[], const int dim, const int size[], const size_t rank)
 {
@@ -275,13 +396,17 @@ static void neigh_lex_coords(int coords[], const int latdim, const int size[], c
 #if QPHIX_PrecisionInt==1
 #define QPHIX_init_fptype QPHIX_init_F
 #define setup_comms setup_comms_F
+#define gf_setup_comms gf_setup_comms_F
 #define QPHIX_finalize_fptype QPHIX_finalize_F
 #define destroy_comms destroy_comms_F
+#define gf_destroy_comms gf_destroy_comms_F
 #elif QPHIX_PrecisionInt==2
 #define QPHIX_init_fptype QPHIX_init_D
 #define setup_comms setup_comms_D
+#define gf_setup_comms gf_setup_comms_D
 #define QPHIX_finalize_fptype QPHIX_finalize_D
 #define destroy_comms destroy_comms_D
+#define gf_destroy_comms gf_destroy_comms_D
 #else
 #error "QPHIX_PrecisionInt not defined/supported!"
 #endif
@@ -364,6 +489,7 @@ QPHIX_init_fptype(QPHIX_layout_t *layout)
     neigh_lex_coords(n_coord, layout->latdim, geometry, myRank, layout->node_number);
 
     setup_comms( m_coord, n_coord );
+    gf_setup_comms();
 
                 MYASSERT(Nxh % 2 == 0);
                 MYASSERT(Ny % 4 == 0);
@@ -432,6 +558,7 @@ QPHIX_finalize_fptype(void)
   BoundTable = 0x00;
   NeighTable = 0x00;
   destroy_comms();
+  gf_destroy_comms();
   BLENGTH = 0;
   PadBound = 0;
   PadNeigh = 0;
