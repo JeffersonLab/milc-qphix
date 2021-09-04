@@ -43,6 +43,10 @@ public:
 	typedef FT Gauge18[8][3][3][2][VL];
 	typedef FT Gauge12[8][2][3][2][VL];
 
+	typedef FT Hermit[8][8][VL];
+	typedef FT HermitHelper[8][7][8][VL];
+	typedef FT HermitHelperYZT[6][7][8][VL];
+
 	typedef struct {
 		FT diag1[6][VL];
 		FT off_diag1[15][2][VL];
@@ -61,6 +65,9 @@ typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::KS KS;
 typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::Gauge Gauge;
 typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::Gauge18 Gauge18;
 typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::Gauge12 Gauge12;
+typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::Hermit Hermit;
+typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::HermitHelper HermitHelper;
+typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::HermitHelperYZT HermitHelperYZT;
 typedef DataTypes<fptype,VECLEN,COMPRESSED_GAUGES>::Clover Clover;
 
 #endif // _QCD_DATA_TYPES_H_

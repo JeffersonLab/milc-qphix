@@ -16,6 +16,7 @@
 #include "ks_config.h"
 #include "ks_globals.h"        /* All global values and macros */
 #include "ks_long_dslash.h"
+#include "gauge_force_imp.h"
 #include "ks_boundary.h"
 
 #include "qphix_internal.h"
@@ -51,6 +52,8 @@
 #define allocKS2 allocKS2_D
 #define allocGauge allocGauge_D
 #define allocGauge18 allocGauge18_D
+#define allocHermit allocHermit_D
+#define allocHermitHelperYZT allocHermitHelperYZT_D
 #define setKS setKS_D
 #define getKS getKS_D
 #define setFullGauge18 setFullGauge18_D
@@ -1222,6 +1225,23 @@ QPHIX_D3_asqtad_destroy_L( QPHIX_D3_FermionLinksAsqtad *L )
     if(L->fatodd!=0x00) _mm_free(L->fatodd);
     free(L);
     L=0x00;
+}
+
+void QPHIX_D3_destroy_G(QPHIX_D3_GaugeField *field)
+{
+    if(field==0x00) return;
+    if(field->geo!=0x00) _mm_free(field->geo);
+    free(field);
+    field=0x00;
+}
+
+void QPHIX_D3_destroy_F(QPHIX_D3_Force *field)
+{
+    if(field==0x00) return;
+    if(field->heo!=0x00) _mm_free(field->heo);
+    if(field->htmp!=0x00) _mm_free(field->htmp);
+    free(field);
+    field=0x00;
 }
 
 void 
