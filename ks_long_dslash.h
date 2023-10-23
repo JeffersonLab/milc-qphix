@@ -20,8 +20,8 @@ typedef struct {
 	unsigned char x, y, z, t, d;
 } ind_t;
 
-void 
-dump_ks_spinor (void * spinor);
+  //void 
+  //dump_ks_spinor (void * spinor);
 
 /*
 void 
